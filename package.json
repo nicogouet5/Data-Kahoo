@@ -1,0 +1,25 @@
+{
+  "name": "dataviz-arena-hbda",
+  "version": "1.0.0",
+  "description": "DataViz Arena: Juego Interactivo de Visualizaciones, Modelo Semántico y Storytelling con Matplotlib (Clase 10 HBDA)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "server": "node server/index.js",
+    "start": "node server/index.js",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "express": "^4.21.1",
+    "cors": "^2.8.5",
+    "lucide-react": "^0.454.0",
+    "canvas-confetti": "^1.9.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.3",
+    "vite": "^5.4.10"
+  }
+}
