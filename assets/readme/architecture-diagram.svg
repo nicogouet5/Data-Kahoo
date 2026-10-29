@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="260" viewBox="0 0 1200 260" role="img" aria-labelledby="arch-title arch-desc">
+  <title id="arch-title">Protocolo Pedagógico de Misiones — 4 Fases de Análisis y Visualización</title>
+  <desc id="arch-desc">Pipeline interactivo: Auditoría BBD, Selección de gráfico Axes, Duelo Visual A/B con Rayos X y Storytelling Ejecutivo.</desc>
+
+  <defs>
+    <pattern id="arch-grid" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1d2e25" stroke-width="0.8" opacity="0.35"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="260" rx="14" fill="#070b09" stroke="#1d2e25" stroke-width="1.5"/>
+  <rect width="1200" height="260" rx="14" fill="url(#arch-grid)"/>
+
+  <!-- Top Section Label -->
+  <g transform="translate(40, 26)">
+    <text fill="#34f576" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="700" letter-spacing="1">
+      PIPELINE DE CADA MISIÓN EMPRESARIAL // CLASE 10 HBDA
+    </text>
+  </g>
+
+  <!-- 4 Process Cards -->
+  <g transform="translate(40, 52)">
+    <!-- Card 1 -->
+    <g transform="translate(0, 0)">
+      <rect width="254" height="175" rx="8" fill="#0b120e" stroke="#365746" stroke-width="1.2"/>
+      <!-- Header -->
+      <rect width="254" height="32" rx="8" fill="#131e18"/>
+      <rect y="24" width="254" height="8" fill="#131e18"/>
+      <line x1="0" y1="32" x2="254" y2="32" stroke="#1d2e25" stroke-width="1"/>
+      <text x="14" y="21" fill="#34f576" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700">01 // BBD &amp; VARIABLES</text>
+
+      <text x="14" y="56" fill="#e8f5ee" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="700">Auditoría Semántica</text>
+      <text x="14" y="78" fill="#b4cbbe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12">• df.head() y tipos técnicos</text>
+      <text x="14" y="98" fill="#b4cbbe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12">• df.drop() para IDs / ruido</text>
+      <text x="14" y="118" fill="#b4cbbe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12">• Cálculo de indicador relativo</text>
+      <text x="14" y="138" fill="#b4cbbe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12">• .dtypes vs. Modelo Semántico</text>
+
+      <!-- Pill -->
+      <rect x="14" y="148" width="92" height="18" rx="3" fill="#131e18" stroke="#365746" stroke-width="0.8"/>
+      <text x="20" y="161" fill="#38bdf8" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="600">PANDAS AUDIT</text>
+    </g>
+
+    <!-- Connector 1 -->
+    <g transform="translate(258, 76)">
+      <text fill="#34f576" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700">══►</text>
+    </g>
+
+    <!-- Card 2 -->
+    <g transform="translate(290, 0)">
+      <rect width="254" height="175" rx="8" fill="#0b120e" stroke="#365746" stroke-width="1.2"/>
+      <rect width="254" height="32" rx="8" fill="#131e18"/>
+      <rect y="24" width="254" height="8" fill="#131e18"/>
+      <line x1="0" y1="32" x2="254" y2="32" stroke="#1d2e25" stroke-width="1"/>
+      <text x="14" y="21" fill="#34f576" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700">02 // SELECCIÓN AXES</text>
+
+      <text x="14" y="56" fill="#e8f5ee" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="700">Mapeo de Variables</text>
+      <text x="14" y="78" fill="#b4cbbe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12">• Axis X: categoría o tiempo</text>
+      <text x="14" y="98" fill="#b4cbbe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12">• Axis Y: magnitud numérica</text>
+      <text x="14" y="118" fill="#b4cbbe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12">• ax.bar (comparar categorías)</text>
+      <text x="14" y="138" fill="#b4cbbe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12">• ax.plot / ax.scatter (relación)</text>
+
+      <rect x="14" y="148" width="98" height="18" rx="3" fill="#131e18" stroke="#365746" stroke-width="0.8"/>
+      <text x="20" y="161" fill="#fbbf24" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="600">AXES DISPATCH</text>
+    </g>
+
+    <!-- Connector 2 -->
+    <g transform="translate(548, 76)">
+      <text fill="#34f576" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700">══►</text>
+    </g>
+
+    <!-- Card 3 -->
+    <g transform="translate(580, 0)">
+      <rect width="254" height="175" rx="8" fill="#0b120e" stroke="#365746" stroke-width="1.2"/>
+      <rect width="254" height="32" rx="8" fill="#131e18"/>
+      <rect y="24" width="254" height="8" fill="#131e18"/>
+      <line x1="0" y1="32" x2="254" y2="32" stroke="#1d2e25" stroke-width="1"/>
+      <text x="14" y="21" fill="#34f576" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700">03 // DUELO A vs. B</text>
+
+      <text x="14" y="56" fill="#e8f5ee" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="700">Buenas Prácticas</text>
+      <text x="14" y="78" fill="#b4cbbe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12">• ylim(0, 100) en barras</text>
+      <text x="14" y="98" fill="#b4cbbe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12">• yscale("log") para órdenes</text>
+      <text x="14" y="118" fill="#b4cbbe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12">• Color de acento vs. arcoíris</text>
+      <text x="14" y="138" fill="#b4cbbe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12">• alpha=0.3 + grid(True)</text>
+
+      <rect x="14" y="148" width="94" height="18" rx="3" fill="#131e18" stroke="#365746" stroke-width="0.8"/>
+      <text x="20" y="161" fill="#38bdf8" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="600">RAYOS X FIG/AX</text>
+    </g>
+
+    <!-- Connector 3 -->
+    <g transform="translate(838, 76)">
+      <text fill="#34f576" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700">══►</text>
+    </g>
+
+    <!-- Card 4 -->
+    <g transform="translate(870, 0)">
+      <rect width="250" height="175" rx="8" fill="#0b120e" stroke="#22e566" stroke-width="1.5"/>
+      <rect width="250" height="32" rx="8" fill="#13241a"/>
+      <rect y="24" width="250" height="8" fill="#13241a"/>
+      <line x1="0" y1="32" x2="250" y2="32" stroke="#1d2e25" stroke-width="1"/>
+      <text x="14" y="21" fill="#34f576" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700">04 // STORYTELLING</text>
+
+      <text x="14" y="56" fill="#e8f5ee" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="700">Decisión Autónoma</text>
+      <text x="14" y="78" fill="#b4cbbe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12">• Titular que se lee solo</text>
+      <text x="14" y="98" fill="#b4cbbe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12">• ax.set_title() ejecutivo</text>
+      <text x="14" y="118" fill="#b4cbbe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12">• Recompensa de XP por ronda</text>
+      <text x="14" y="138" fill="#b4cbbe" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12">• Script Python para Colab</text>
+
+      <rect x="14" y="148" width="102" height="18" rx="3" fill="#22e566"/>
+      <text x="20" y="161" fill="#05140a" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="800">COLAB SCRIPT</text>
+    </g>
+  </g>
+</svg>
