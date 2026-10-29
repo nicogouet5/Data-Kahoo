@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Info
 } from 'lucide-react';
+import { playHackerSfx } from '../utils/hackerEffects.js';
 
 const SEMANTIC_OPTIONS = [
   'Identificador / Ruido de Sistema',
@@ -22,7 +23,7 @@ function normalizeSemanticCategory(rawType) {
   return 'Cuantitativa Continua / Discreta (Variable o Indicador)';
 }
 
-export default function Stage1Database({ currentCase, onCompleteStage }) {
+export default function Stage1Database({ currentCase, onCompleteStage, sfxEnabled }) {
   const [decisions, setDecisions] = useState(() => {
     const init = {};
     currentCase.columns.forEach((col) => {
@@ -40,6 +41,7 @@ export default function Stage1Database({ currentCase, onCompleteStage }) {
 
   const handleRoleChange = (colName, role) => {
     if (verified) return;
+    playHackerSfx('tick', sfxEnabled);
     setDecisions((prev) => ({
       ...prev,
       [colName]: {
@@ -53,6 +55,7 @@ export default function Stage1Database({ currentCase, onCompleteStage }) {
 
   const handleSemanticChange = (colName, semantic) => {
     if (verified) return;
+    playHackerSfx('tick', sfxEnabled);
     setDecisions((prev) => ({
       ...prev,
       [colName]: {
@@ -86,6 +89,7 @@ export default function Stage1Database({ currentCase, onCompleteStage }) {
     });
 
     const earnedPoints = Math.round((correctCount / totalCols) * 150);
+    playHackerSfx(correctCount === totalCols ? 'success' : 'error', sfxEnabled);
     setVerified(true);
     setFeedback({
       correctCount,
@@ -95,36 +99,39 @@ export default function Stage1Database({ currentCase, onCompleteStage }) {
     });
   };
 
-  const allSelected =
-    indicatorBuilt &&
-    currentCase.columns.every(
-      (col) => decisions[col.name]?.role && decisions[col.name]?.semantic
-    );
+  const completedColsCount = currentCase.columns.filter(
+    (col) => decisions[col.name]?.role && decisions[col.name]?.semantic
+  ).length;
+  const totalColsCount = currentCase.columns.length;
+  const auditProgressPct = Math.round((completedColsCount / totalColsCount) * 100);
+
+  const allSelected = indicatorBuilt && completedColsCount === totalColsCount;
 
   return (
     <section className="stage-workspace" aria-labelledby="stage1-heading">
       <div className="stage-header">
-        <h2 id="stage1-heading">
-          Etapa 1 — Tipo Técnico (<code>.dtypes</code>) vs. Modelo Semántico
+        <h2 id="stage1-heading" tabIndex={-1}>
+          Fase 01 — Tipo Técnico (<code>.dtypes</code>) vs. Modelo Semántico
         </h2>
-        <span className="stage-points-tag">Hasta +150 pts</span>
+        <span className="stage-points-tag">MAX +150 XP</span>
       </div>
 
       <div className="pedagogical-note">
-        <Info size={18} className="pedagogical-note-icon" />
+        <Info size={18} className="pedagogical-note-icon" aria-hidden="true" />
         <div>
-          <strong>Regla Semana 3 + Clase 10:</strong> Que una columna tenga{' '}
-          <code>dtype: int64</code> u <code>object</code> describe cómo la guarda Pandas, no qué
-          significa en el negocio. Descarta los identificadores o ruido con <code>df.drop</code> y
-          clasifica el tipo semántico de las columnas útiles.
+          <strong>Protocolo Semana 3 + Clase 10:</strong> Que una columna tenga{' '}
+          <code>dtype: int64</code> u <code>object</code> describe cómo la almacena Pandas, no su
+          rol analítico. Purga los identificadores o ruido con <code>df.drop</code> y clasifica el
+          tipo semántico de las columnas activas.
         </div>
       </div>
 
       <div className="dataframe-frame">
         <div className="df-code-bar">
           <span className="df-code-title">
-            <Database size={14} /> <code>{currentCase.dataframeName}.head(6)</code> — Muestra de la
-            base ({currentCase.rows.length} filas totales)
+            <Database size={14} aria-hidden="true" />{' '}
+            <code>{currentCase.dataframeName}.head(6)</code> — Muestra en memoria (
+            {currentCase.rows.length} registros)
           </span>
           <code className="tabular">
             shape: ({currentCase.rows.length}, {currentCase.columns.length})
@@ -180,10 +187,10 @@ export default function Stage1Database({ currentCase, onCompleteStage }) {
       {currentCase.needsIndicator && (
         <div className={`indicator-builder-box ${indicatorBuilt ? 'built' : ''}`}>
           <div className="ind-info">
-            <Calculator size={20} />
+            <Calculator size={20} aria-hidden="true" />
             <div>
-              <strong>De Variable a Indicador (Semana 3):</strong> Para comparar rentabilidad de
-              forma justa entre tiendas de distinto tamaño, primero construimos el indicador{' '}
+              <strong>Compilar Indicador (Semana 3):</strong> Para comparar rentabilidad de forma
+              justa entre tiendas de distinto tamaño, primero inyectamos el indicador{' '}
               <code>{currentCase.needsIndicator.name}</code> en el DataFrame:
               <div className="ind-formula">
                 <code>
@@ -197,20 +204,36 @@ export default function Stage1Database({ currentCase, onCompleteStage }) {
             type="button"
             className={indicatorBuilt ? 'btn-secondary' : 'btn-primary'}
             disabled={indicatorBuilt}
-            onClick={() => setIndicatorBuilt(true)}
+            onClick={() => {
+              playHackerSfx('lock', sfxEnabled);
+              setIndicatorBuilt(true);
+            }}
           >
-            {indicatorBuilt ? '✓ Indicador Calculado' : 'Calcular Indicador en df'}
+            {indicatorBuilt ? '✓ Indicador Compilado' : 'Ejecutar Cálculo en df'}
           </button>
         </div>
       )}
 
       <div>
-        <h3 style={{ marginBottom: '0.75rem' }}>
-          Matriz de Auditoría de Columnas (<code>{currentCase.dataframeName}</code>)
-        </h3>
+        <div className="audit-header-bar">
+          <h3>
+            Matriz de Auditoría de Columnas (<code>{currentCase.dataframeName}</code>)
+          </h3>
+          <div className="audit-meter-wrap tabular" aria-label="Progreso de auditoría de columnas">
+            <span>
+              AUDITADAS: {completedColsCount}/{totalColsCount}
+            </span>
+            <div className="hud-progress-track" aria-hidden="true">
+              <div
+                className="hud-progress-fill"
+                style={{ transform: `scaleX(${auditProgressPct / 100})` }}
+              />
+            </div>
+          </div>
+        </div>
 
         <div className="audit-ledger">
-          {currentCase.columns.map((col) => {
+          {currentCase.columns.map((col, idx) => {
             const userDec = decisions[col.name];
             const detail = feedback?.details.find((d) => d.name === col.name);
             const selectId = `sem-select-${col.name}`;
@@ -218,6 +241,7 @@ export default function Stage1Database({ currentCase, onCompleteStage }) {
             return (
               <div
                 key={col.name}
+                style={{ '--stagger-i': Math.min(idx, 8) }}
                 className={`audit-row ${
                   detail ? (detail.isCorrect ? 'row-correct' : 'row-wrong') : ''
                 }`}
@@ -229,7 +253,7 @@ export default function Stage1Database({ currentCase, onCompleteStage }) {
                       <span className="dtype-pill">dtype: {col.dtype}</span>
                     </div>
                     <p className="col-samples">
-                      Valores ej.: {col.sampleValues.slice(0, 4).join(', ')}
+                      Muestra: {col.sampleValues.slice(0, 4).join(', ')}
                     </p>
                   </div>
 
@@ -242,7 +266,7 @@ export default function Stage1Database({ currentCase, onCompleteStage }) {
                         onClick={() => handleRoleChange(col.name, 'keep')}
                         disabled={verified}
                       >
-                        <CheckCircle size={14} /> Usar
+                        <CheckCircle size={14} aria-hidden="true" /> Usar
                       </button>
                       <button
                         type="button"
@@ -250,7 +274,7 @@ export default function Stage1Database({ currentCase, onCompleteStage }) {
                         onClick={() => handleRoleChange(col.name, 'drop')}
                         disabled={verified}
                       >
-                        <Trash2 size={14} /> Drop
+                        <Trash2 size={14} aria-hidden="true" /> Drop
                       </button>
                     </div>
                   </div>
@@ -280,8 +304,8 @@ export default function Stage1Database({ currentCase, onCompleteStage }) {
                   <div className={`audit-feedback-line ${detail.isCorrect ? 'ok' : 'err'}`}>
                     <span className="feedback-status">
                       {detail.isCorrect
-                        ? '✓ Correcto:'
-                        : `✗ Esperado (${detail.expectedRole} · ${detail.expectedSem}):`}
+                        ? '[OK]'
+                        : `[ERR · ${detail.expectedRole} · ${detail.expectedSem}]`}
                     </span>
                     <span>{detail.explanation}</span>
                   </div>
@@ -300,19 +324,19 @@ export default function Stage1Database({ currentCase, onCompleteStage }) {
             disabled={!allSelected}
             onClick={handleVerify}
           >
-            Verificar Auditoría de Variables
+            Ejecutar Auditoría de Variables
           </button>
         </div>
       ) : (
         <div className="stage-result-banner banner-ok">
           <div>
             <h3>
-              Etapa 1 completada: {feedback.correctCount} de {feedback.totalCols} columnas
-              correctas (+{feedback.earnedPoints} pts)
+              Fase 01 verificada: {feedback.correctCount} de {feedback.totalCols} columnas
+              exactas (+{feedback.earnedPoints} XP)
             </h3>
             <p>
-              Con el DataFrame depurado y las variables clasificadas, pasemos a elegir la
-              representación gráfica apropiada.
+              DataFrame depurado y modelo semántico validado. Procediendo al módulo de selección
+              gráfica en Matplotlib.
             </p>
           </div>
           <button
@@ -320,7 +344,7 @@ export default function Stage1Database({ currentCase, onCompleteStage }) {
             className="btn-primary"
             onClick={() => onCompleteStage(feedback.earnedPoints)}
           >
-            Continuar a Etapa 2 <ArrowRight size={18} />
+            Avanzar a Fase 02 <ArrowRight size={18} aria-hidden="true" />
           </button>
         </div>
       )}

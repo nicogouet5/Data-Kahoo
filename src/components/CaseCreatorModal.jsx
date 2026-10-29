@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, PlusCircle } from 'lucide-react';
+import { closeTopLayer } from '../utils/hackerEffects.js';
 
 export default function CaseCreatorModal({ isOpen, onClose, onCreateCase }) {
   const [industry, setIndustry] = useState('Música & Festivales');
@@ -19,9 +20,10 @@ export default function CaseCreatorModal({ isOpen, onClose, onCreateCase }) {
     if (!dialog) return;
 
     if (isOpen && !dialog.open) {
+      dialog.removeAttribute('data-closing');
       dialog.showModal();
     } else if (!isOpen && dialog.open) {
-      dialog.close();
+      closeTopLayer(dialog);
     }
   }, [isOpen]);
 
@@ -30,10 +32,18 @@ export default function CaseCreatorModal({ isOpen, onClose, onCreateCase }) {
     if (!dialog) return;
 
     const handleClose = () => {
+      dialog.removeAttribute('data-closing');
       dialog.returnValue = '';
       onClose();
     };
+
+    const handleCancel = (e) => {
+      e.preventDefault();
+      closeTopLayer(dialog);
+    };
+
     dialog.addEventListener('close', handleClose);
+    dialog.addEventListener('cancel', handleCancel);
 
     let cleanupLightDismiss = () => {};
     if (typeof HTMLDialogElement !== 'undefined' && !('closedBy' in HTMLDialogElement.prototype)) {
@@ -47,7 +57,7 @@ export default function CaseCreatorModal({ isOpen, onClose, onCreateCase }) {
       };
       const onPointerUp = (e) => {
         if (pressedOutside && isOutside(e) && dialog.open) {
-          dialog.close();
+          closeTopLayer(dialog);
         }
       };
       dialog.addEventListener('pointerdown', onPointerDown);
@@ -60,6 +70,7 @@ export default function CaseCreatorModal({ isOpen, onClose, onCreateCase }) {
 
     return () => {
       dialog.removeEventListener('close', handleClose);
+      dialog.removeEventListener('cancel', handleCancel);
       cleanupLightDismiss();
     };
   }, [onClose]);
@@ -87,7 +98,7 @@ export default function CaseCreatorModal({ isOpen, onClose, onCreateCase }) {
       id: `custom-${Date.now()}`,
       industry,
       icon: 'Sparkles',
-      badgeColor: '#f0b429',
+      badgeColor: '#22e566',
       title,
       company,
       context,
@@ -226,7 +237,7 @@ plt.show()`
 
     onCreateCase(newCase);
     if (dialogRef.current?.open) {
-      dialogRef.current.close();
+      closeTopLayer(dialogRef.current);
     } else {
       onClose();
     }
@@ -241,22 +252,20 @@ plt.show()`
     >
       <div className="modal-header">
         <div className="modal-title-group">
-          <PlusCircle size={22} className="modal-accent-icon" />
+          <PlusCircle size={22} className="modal-accent-icon" aria-hidden="true" />
           <div>
-            <h2 id="creator-dialog-title">Crear Caso Empresarial en Vivo</h2>
+            <h2 id="creator-dialog-title">Inyectar Caso Empresarial en Vivo</h2>
             <p>Agrega un contexto propuesto por los estudiantes durante la ayudantía</p>
           </div>
         </div>
-        <form method="dialog">
-          <button
-            type="submit"
-            value="cancel"
-            className="modal-close-btn"
-            aria-label="Cerrar creador de casos"
-          >
-            <X size={18} />
-          </button>
-        </form>
+        <button
+          type="button"
+          className="modal-close-btn"
+          onClick={() => closeTopLayer(dialogRef.current)}
+          aria-label="Cerrar creador de casos"
+        >
+          <X size={18} aria-hidden="true" />
+        </button>
       </div>
 
       <form className="creator-form" onSubmit={handleSubmit}>
@@ -318,12 +327,12 @@ plt.show()`
           <button
             type="button"
             className="btn-secondary"
-            onClick={() => dialogRef.current?.close()}
+            onClick={() => closeTopLayer(dialogRef.current)}
           >
             Cancelar
           </button>
           <button type="submit" className="btn-primary">
-            Crear y Jugar Caso
+            Compilar y Jugar Caso
           </button>
         </div>
       </form>

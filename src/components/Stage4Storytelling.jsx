@@ -9,11 +9,17 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import MatplotlibCanvas from './MatplotlibCanvas.jsx';
+import {
+  prefersReducedMotion,
+  playHackerSfx,
+  useCountUp
+} from '../utils/hackerEffects.js';
 
 export default function Stage4Storytelling({
   currentCase,
   casePointsSoFar,
-  onFinishCase
+  onFinishCase,
+  sfxEnabled
 }) {
   const [selectedId, setSelectedId] = useState(null);
   const [submitted, setSubmitted] = useState(false);
@@ -31,18 +37,17 @@ export default function Stage4Storytelling({
 
   const handleConfirm = () => {
     if (!selectedId || submitted) return;
-    setSubmitted(true);
     const opt = currentCase.storytelling.options.find((o) => o.id === selectedId);
-    const reducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    playHackerSfx(opt?.isCorrect ? 'boot' : 'error', sfxEnabled);
+    setSubmitted(true);
 
-    if (opt?.isCorrect && !reducedMotion) {
+    if (opt?.isCorrect && !prefersReducedMotion()) {
       try {
         confetti({
-          particleCount: 65,
+          particleCount: 70,
           spread: 68,
-          origin: { y: 0.62 }
+          origin: { y: 0.62 },
+          colors: ['#22e566', '#38bdf8', '#fbbf24', '#e8f5ee']
         });
       } catch {
         // Ignore canvas confetti errors in headless/restricted contexts
@@ -52,25 +57,27 @@ export default function Stage4Storytelling({
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(currentCase.storytelling.finalCode);
+    playHackerSfx('tick', sfxEnabled);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const earnedPoints = selectedOption?.isCorrect ? 150 : 40;
   const totalMissionPoints = casePointsSoFar + (submitted ? earnedPoints : 0);
+  const animatedXp = useCountUp(totalMissionPoints, submitted, 680);
 
   return (
     <section className="stage-workspace" aria-labelledby="stage4-heading">
       <div className="stage-header">
-        <h2 id="stage4-heading">
-          Etapa 4 — El Gráfico Final Se Lee Sin Explicación Adicional
+        <h2 id="stage4-heading" tabIndex={-1}>
+          Fase 04 — El Gráfico Final Se Lee Sin Explicación Adicional
         </h2>
-        <span className="stage-points-tag">+150 pts</span>
+        <span className="stage-points-tag">+150 XP</span>
       </div>
 
       <div className="storytelling-layout">
         <div>
-          <h3 className="storytelling-col-heading">Gráfico Depurado para Directorio</h3>
+          <h3 className="storytelling-col-heading">Salida Depurada para Directorio</h3>
           <MatplotlibCanvas
             rows={currentCase.rows}
             config={{
@@ -82,15 +89,15 @@ export default function Stage4Storytelling({
 
           <div className="code-snippet-box final-code">
             <div className="code-bar">
-              <span>Script completo reproducible (Colab / Jupyter)</span>
+              <span>notebook_export.py (Colab / Jupyter)</span>
               <button type="button" className="copy-btn" onClick={handleCopyCode}>
                 {copied ? (
                   <>
-                    <Check size={13} /> Copiado
+                    <Check size={13} aria-hidden="true" /> Copiado
                   </>
                 ) : (
                   <>
-                    <Copy size={13} /> Copiar código
+                    <Copy size={13} aria-hidden="true" /> Copiar script
                   </>
                 )}
               </button>
@@ -102,13 +109,15 @@ export default function Stage4Storytelling({
         </div>
 
         <div>
-          <h3 className="storytelling-col-heading">Titular Ejecutivo (<code>ax.set_title</code>)</h3>
+          <h3 className="storytelling-col-heading">
+            Titular Ejecutivo (<code>ax.set_title</code>)
+          </h3>
           <p className="stage-prompt-question" style={{ marginBottom: '1rem' }}>
             {currentCase.storytelling.prompt}
           </p>
 
           <div className="story-options-list">
-            {currentCase.storytelling.options.map((opt) => {
+            {currentCase.storytelling.options.map((opt, idx) => {
               const isSelected = selectedId === opt.id;
               const showCorrect = submitted && opt.isCorrect;
               const showWrong = submitted && isSelected && !opt.isCorrect;
@@ -117,10 +126,16 @@ export default function Stage4Storytelling({
                 <button
                   key={opt.id}
                   type="button"
+                  style={{ '--stagger-i': idx }}
                   className={`story-option-card ${isSelected ? 'selected' : ''} ${
                     showCorrect ? 'correct' : ''
                   } ${showWrong ? 'wrong' : ''}`}
-                  onClick={() => !submitted && setSelectedId(opt.id)}
+                  onClick={() => {
+                    if (!submitted) {
+                      playHackerSfx('tick', sfxEnabled);
+                      setSelectedId(opt.id);
+                    }
+                  }}
                   disabled={submitted}
                 >
                   <div className="story-opt-header">
@@ -131,9 +146,9 @@ export default function Stage4Storytelling({
                   {submitted && (isSelected || opt.isCorrect) && (
                     <div className="story-feedback">
                       {opt.isCorrect ? (
-                        <CheckCircle2 size={15} />
+                        <CheckCircle2 size={15} aria-hidden="true" />
                       ) : (
-                        <XCircle size={15} />
+                        <XCircle size={15} aria-hidden="true" />
                       )}
                       <span>{opt.feedback}</span>
                     </div>
@@ -150,17 +165,17 @@ export default function Stage4Storytelling({
               disabled={!selectedId}
               onClick={handleConfirm}
             >
-              Confirmar Titular de Storytelling
+              Transmitir Titular Ejecutivo
             </button>
           ) : (
             <div className="mission-complete-panel">
               <div className="mission-trophy-row">
-                <Award size={34} />
+                <Award size={34} aria-hidden="true" />
                 <div>
-                  <h3>Misión empresarial completada</h3>
+                  <h3>Misión desbloqueada al 100%</h3>
                   <p>
-                    Puntaje acumulado en <strong>{currentCase.company}</strong>:{' '}
-                    <span className="mission-score-readout">+{totalMissionPoints} pts</span>
+                    Recompensa total en <strong>{currentCase.company}</strong>:{' '}
+                    <span className="mission-score-readout">+{animatedXp} XP</span>
                   </p>
                 </div>
               </div>
@@ -169,7 +184,7 @@ export default function Stage4Storytelling({
                 className="btn-primary full-width"
                 onClick={() => onFinishCase(earnedPoints)}
               >
-                <RotateCcw size={17} /> Guardar Puntaje y Volver al Directorio
+                <RotateCcw size={17} aria-hidden="true" /> Registrar XP y Volver al Directorio
               </button>
             </div>
           )}

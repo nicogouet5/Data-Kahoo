@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, XCircle, ArrowRight, Code2, Eye } from 'lucide-react';
 import MatplotlibCanvas from './MatplotlibCanvas.jsx';
+import { runViewTransition, playHackerSfx } from '../utils/hackerEffects.js';
 
-export default function Stage3VisualDuel({ currentCase, onCompleteStage }) {
+export default function Stage3VisualDuel({ currentCase, onCompleteStage, sfxEnabled }) {
   const [duelIndex, setDuelIndex] = useState(0);
   const [selectedVersion, setSelectedVersion] = useState(null); // 'A' | 'B'
   const [submitted, setSubmitted] = useState(false);
@@ -18,27 +19,37 @@ export default function Stage3VisualDuel({ currentCase, onCompleteStage }) {
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (!submitted) {
-        if (e.key.toLowerCase() === 'a') setSelectedVersion('A');
-        if (e.key.toLowerCase() === 'b') setSelectedVersion('B');
+        if (e.key.toLowerCase() === 'a') {
+          playHackerSfx('tick', sfxEnabled);
+          setSelectedVersion('A');
+        }
+        if (e.key.toLowerCase() === 'b') {
+          playHackerSfx('tick', sfxEnabled);
+          setSelectedVersion('B');
+        }
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [submitted]);
+  }, [submitted, sfxEnabled]);
 
   const handleConfirm = () => {
     if (!selectedVersion || submitted) return;
+    const ok = selectedVersion === currentDuel.correctVersion;
+    playHackerSfx(ok ? 'success' : 'error', sfxEnabled);
     setSubmitted(true);
-    const isCorrect = selectedVersion === currentDuel.correctVersion;
-    const pts = isCorrect ? 100 : 25;
+    const pts = ok ? 100 : 25;
     setAccumulatedPoints((prev) => prev + pts);
   };
 
   const handleNextDuel = () => {
     if (duelIndex < duels.length - 1) {
-      setDuelIndex((prev) => prev + 1);
-      setSelectedVersion(null);
-      setSubmitted(false);
+      playHackerSfx('lock', sfxEnabled);
+      runViewTransition(() => {
+        setDuelIndex((prev) => prev + 1);
+        setSelectedVersion(null);
+        setSubmitted(false);
+      }, '#stage3-heading');
     } else {
       onCompleteStage(accumulatedPoints);
     }
@@ -51,27 +62,30 @@ export default function Stage3VisualDuel({ currentCase, onCompleteStage }) {
   return (
     <section className="stage-workspace" aria-labelledby="stage3-heading">
       <div className="stage-header">
-        <h2 id="stage3-heading">
-          Etapa 3 — {currentDuel.title} ({duelIndex + 1}/{duels.length})
+        <h2 id="stage3-heading" tabIndex={-1}>
+          Fase 03 — {currentDuel.title} ({duelIndex + 1}/{duels.length})
         </h2>
         <div className="stage-header-controls">
           <button
             type="button"
             className={`xray-btn ${sharedXRay ? 'active' : ''}`}
-            onClick={() => setSharedXRay((prev) => !prev)}
+            onClick={() => {
+              playHackerSfx('scan', sfxEnabled);
+              setSharedXRay((prev) => !prev);
+            }}
             title="Comparar anatomía Figure vs. Axes simultáneamente en ambas versiones"
           >
-            <Eye size={14} />
-            {sharedXRay ? 'Ocultar Rayos X (fig/ax)' : 'Rayos X: Figure vs. Axes'}
+            <Eye size={14} aria-hidden="true" />
+            {sharedXRay ? 'Desactivar Rayos X (fig/ax)' : 'Scanner Rayos X: fig vs. ax'}
           </button>
-          <span className="stage-points-tag">+100 pts por duelo</span>
+          <span className="stage-points-tag">+100 XP / duelo</span>
         </div>
       </div>
 
       <p className="stage-prompt-question">{currentDuel.question}</p>
 
       <div className="duel-arena-grid">
-        {['A', 'B'].map((ver) => {
+        {['A', 'B'].map((ver, idx) => {
           const vData = ver === 'A' ? currentDuel.versionA : currentDuel.versionB;
           const isSelected = selectedVersion === ver;
           const isWinner = submitted && currentDuel.correctVersion === ver;
@@ -79,20 +93,26 @@ export default function Stage3VisualDuel({ currentCase, onCompleteStage }) {
 
           return (
             <div
-              key={ver}
+              key={`${duelIndex}-${ver}`}
+              style={{ '--stagger-i': idx }}
               className={`duel-panel ${isSelected ? 'selected' : ''} ${
                 isWinner ? 'winner' : ''
               } ${isLoser ? 'loser' : ''}`}
-              onClick={() => !submitted && setSelectedVersion(ver)}
+              onClick={() => {
+                if (!submitted) {
+                  playHackerSfx('tick', sfxEnabled);
+                  setSelectedVersion(ver);
+                }
+              }}
             >
               <div className="duel-card-header">
                 <div className="duel-card-title-group">
-                  <span className="version-tag">VERSIÓN {ver}</span>
+                  <span className="version-tag">BUILD_{ver}</span>
                   <strong>{vData.label}</strong>
                 </div>
                 {isWinner && (
                   <span className="solved-badge">
-                    <CheckCircle2 size={13} /> Óptima
+                    <CheckCircle2 size={13} aria-hidden="true" /> ÓPTIMA
                   </span>
                 )}
               </div>
@@ -107,7 +127,7 @@ export default function Stage3VisualDuel({ currentCase, onCompleteStage }) {
               <div className="code-snippet-box">
                 <div className="code-bar">
                   <span className="code-bar-label">
-                    <Code2 size={14} /> Código Python · Versión {ver}
+                    <Code2 size={14} aria-hidden="true" /> script_{ver.toLowerCase()}.py
                   </span>
                   <kbd className="kbd-hint">{ver}</kbd>
                 </div>
@@ -122,10 +142,13 @@ export default function Stage3VisualDuel({ currentCase, onCompleteStage }) {
                 disabled={submitted}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!submitted) setSelectedVersion(ver);
+                  if (!submitted) {
+                    playHackerSfx('tick', sfxEnabled);
+                    setSelectedVersion(ver);
+                  }
                 }}
               >
-                {isSelected ? `✓ Versión ${ver} seleccionada` : `Elegir Versión ${ver}`}
+                {isSelected ? `✓ BUILD_${ver} SELECCIONADA` : `Seleccionar BUILD_${ver}`}
               </button>
             </div>
           );
@@ -140,7 +163,7 @@ export default function Stage3VisualDuel({ currentCase, onCompleteStage }) {
             disabled={!selectedVersion}
             onClick={handleConfirm}
           >
-            Confirmar Decisión en Duelo {duelIndex + 1}
+            Validar Decisión en Duelo {duelIndex + 1}
           </button>
         </div>
       ) : (
@@ -149,13 +172,13 @@ export default function Stage3VisualDuel({ currentCase, onCompleteStage }) {
             <h3>
               {isCorrect ? (
                 <>
-                  <CheckCircle2 size={18} className="inline-icon" /> Respuesta correcta: la Versión{' '}
-                  {currentDuel.correctVersion} sigue las reglas de la Clase 10 (+100 pts)
+                  <CheckCircle2 size={18} className="inline-icon" aria-hidden="true" /> [OK] La
+                  BUILD_{currentDuel.correctVersion} cumple el estándar Clase 10 (+100 XP)
                 </>
               ) : (
                 <>
-                  <XCircle size={18} className="inline-icon" /> La opción recomendada era la Versión{' '}
-                  {currentDuel.correctVersion} (+25 pts)
+                  <XCircle size={18} className="inline-icon" aria-hidden="true" /> [WARN] La opción
+                  correcta era BUILD_{currentDuel.correctVersion} (+25 XP)
                 </>
               )}
             </h3>
@@ -164,11 +187,12 @@ export default function Stage3VisualDuel({ currentCase, onCompleteStage }) {
           <button type="button" className="btn-primary" onClick={handleNextDuel}>
             {duelIndex < duels.length - 1 ? (
               <>
-                Siguiente Duelo ({duelIndex + 2}/{duels.length}) <ArrowRight size={18} />
+                Siguiente Duelo ({duelIndex + 2}/{duels.length}){' '}
+                <ArrowRight size={18} aria-hidden="true" />
               </>
             ) : (
               <>
-                Continuar a Etapa 4: Storytelling <ArrowRight size={18} />
+                Avanzar a Fase 04: Storytelling <ArrowRight size={18} aria-hidden="true" />
               </>
             )}
           </button>

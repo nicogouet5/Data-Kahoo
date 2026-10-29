@@ -11,8 +11,14 @@ import {
   Film,
   CheckCircle2,
   ArrowUpRight,
-  PlusCircle
+  PlusCircle,
+  Crosshair
 } from 'lucide-react';
+import {
+  prefersReducedMotion,
+  playHackerSfx,
+  useCipherScramble
+} from '../utils/hackerEffects.js';
 
 const ICON_MAP = {
   Gamepad2,
@@ -30,12 +36,17 @@ export default function ContextRoulette({
   solvedCaseIds,
   onSelectCase,
   onOpenCreator,
-  modalOpen
+  modalOpen,
+  sfxEnabled
 }) {
   const [spinning, setSpinning] = useState(false);
   const [highlightedId, setHighlightedId] = useState(null);
+  const [scanLabel, setScanLabel] = useState('STANDBY // READY_FOR_DISPATCH');
+  const [scrambleTick, setScrambledTick] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'solved'
   const [query, setQuery] = useState('');
+
+  const scrambledStatus = useCipherScramble(scanLabel, scrambleTick);
 
   const handleSpinRoulette = useCallback(() => {
     if (spinning || cases.length === 0) return;
@@ -44,12 +55,9 @@ export default function ContextRoulette({
     const pool = unsolved.length > 0 ? unsolved : cases;
     const chosen = pool[Math.floor(Math.random() * pool.length)];
 
-    const prefersReducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (prefersReducedMotion) {
+    if (prefersReducedMotion()) {
       setHighlightedId(chosen.id);
+      setScanLabel(`LOCKED // ${chosen.dataframeName}`);
       onSelectCase(chosen);
       return;
     }
@@ -59,21 +67,26 @@ export default function ContextRoulette({
     setQuery('');
 
     let ticks = 0;
-    const totalTicks = 16;
+    const totalTicks = 15;
     const interval = setInterval(() => {
       const candidate = cases[ticks % cases.length];
       setHighlightedId(candidate.id);
+      setScanLabel(`SCANNING // ${candidate.dataframeName}`);
+      playHackerSfx('tick', sfxEnabled);
       ticks++;
       if (ticks >= totalTicks) {
         clearInterval(interval);
         setHighlightedId(chosen.id);
+        setScanLabel(`TARGET_LOCKED // ${chosen.dataframeName}`);
+        setScrambledTick((k) => k + 1);
+        playHackerSfx('lock', sfxEnabled);
         setTimeout(() => {
           setSpinning(false);
           onSelectCase(chosen);
-        }, 520);
+        }, 480);
       }
-    }, 80);
-  }, [spinning, cases, solvedCaseIds, onSelectCase]);
+    }, 78);
+  }, [spinning, cases, solvedCaseIds, onSelectCase, sfxEnabled]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -106,20 +119,21 @@ export default function ContextRoulette({
 
   const pendingCount = cases.filter((c) => !solvedCaseIds.includes(c.id)).length;
   const solvedCount = cases.length - pendingCount;
+  const completionPct = cases.length > 0 ? Math.round((solvedCount / cases.length) * 100) : 0;
 
   return (
     <div className="roulette-lobby">
       <section className="lobby-desk" aria-labelledby="lobby-main-title">
         <div className="lobby-pitch">
-          <h1 id="lobby-main-title" className="lobby-title">
+          <h1 id="lobby-main-title" className="lobby-title" tabIndex={-1}>
             Del Dato Crudo al <span className="title-accent">Storytelling</span> con Matplotlib
           </h1>
           <p className="lobby-lead">
-            Sorteamos un contexto empresarial real para auditar su DataFrame (
+            Intercepta un contexto empresarial real para auditar su DataFrame (
             <code>.dtypes</code> frente al modelo semántico), elegir el gráfico preciso, detectar
-            distorsiones en duelos <code>fig, ax</code> y redactar un titular ejecutivo que se lea
-            sin explicación adicional.
+            distorsiones en duelos <code>fig, ax</code> y redactar un titular ejecutivo autónomo.
           </p>
+
           <div className="lobby-actions">
             <button
               type="button"
@@ -127,30 +141,40 @@ export default function ContextRoulette({
               onClick={handleSpinRoulette}
               disabled={spinning}
             >
-              <Dices size={19} />
-              <span>{spinning ? 'Sorteando misión...' : 'Girar Ruleta de Contexto'}</span>
+              <Dices size={19} aria-hidden="true" />
+              <span>{spinning ? 'Escaneando Sector...' : 'Sortear Misión Aleatoria'}</span>
               <kbd className="kbd-hint">R</kbd>
             </button>
             <button type="button" className="btn-secondary" onClick={onOpenCreator}>
-              <PlusCircle size={18} />
-              <span>Crear Caso en Vivo</span>
+              <PlusCircle size={18} aria-hidden="true" />
+              <span>Inyectar Caso en Vivo</span>
             </button>
           </div>
-          <p className="lobby-progress-note">
-            Progreso de la sesión: <strong>{solvedCount}</strong> de <strong>{cases.length}</strong>{' '}
-            misiones completadas
-          </p>
+
+          <div className="radar-telemetry-strip" role="status" aria-live="polite">
+            <span className="radar-target-code">
+              <Crosshair
+                size={14}
+                className={spinning ? 'radar-spin-icon' : ''}
+                aria-hidden="true"
+              />
+              <code>{scrambledStatus}</code>
+            </span>
+            <span className="lobby-progress-inline tabular">
+              MISIONES: <strong>{solvedCount}</strong>/{cases.length} ({completionPct}%)
+            </span>
+          </div>
         </div>
 
         <div className="lobby-protocol">
-          <h2 className="protocol-heading">Protocolo de cada Misión</h2>
+          <h2 className="protocol-heading">Protocolo de Ejecución (4 Fases)</h2>
           <ol className="protocol-steps">
             <li>
               <span className="step-index">01</span>
               <div>
-                <strong>Auditoría de BBD & Modelo Semántico</strong>
+                <strong>Auditoría de BBD &amp; Modelo Semántico</strong>
                 <span className="step-desc">
-                  Descarta IDs/ruido con <code>df.drop</code>, construye indicadores y clasifica
+                  Purga IDs/ruido con <code>df.drop</code>, construye indicadores y clasifica
                   variables.
                 </span>
               </div>
@@ -168,19 +192,19 @@ export default function ContextRoulette({
             <li>
               <span className="step-index">03</span>
               <div>
-                <strong>Duelo Visual A vs. B</strong>
+                <strong>Duelo Visual A vs. B + Rayos X</strong>
                 <span className="step-desc">
-                  Evalúa <code>ylim(0, 100)</code>, <code>yscale(&quot;log&quot;)</code>, color de
-                  acento, <code>alpha=0.3</code> y <code>legend</code>.
+                  Inspecciona <code>ylim(0, 100)</code>, <code>yscale(&quot;log&quot;)</code>,{' '}
+                  <code>alpha=0.3</code> y <code>legend</code>.
                 </span>
               </div>
             </li>
             <li>
               <span className="step-index">04</span>
               <div>
-                <strong>Titular Ejecutivo & Código Colab</strong>
+                <strong>Titular Ejecutivo &amp; Script Colab</strong>
                 <span className="step-desc">
-                  Elige el mejor <code>ax.set_title</code> y copia el script Python completo.
+                  Elige el mejor <code>ax.set_title</code> y extrae el código Python reproducible.
                 </span>
               </div>
             </li>
@@ -190,7 +214,7 @@ export default function ContextRoulette({
 
       <section aria-labelledby="directory-heading">
         <div className="directory-toolbar">
-          <h2 id="directory-heading">Banco de Contextos ({filteredCases.length})</h2>
+          <h2 id="directory-heading">Sectores de Datos ({filteredCases.length})</h2>
 
           <div className="filter-group" role="group" aria-label="Filtrar casos por estado">
             <button
@@ -219,7 +243,7 @@ export default function ContextRoulette({
           <input
             type="search"
             className="search-input"
-            placeholder="Buscar industria, empresa o df..."
+            placeholder="Filtrar sector, empresa o df_..."
             aria-label="Buscar caso empresarial"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -227,28 +251,40 @@ export default function ContextRoulette({
         </div>
 
         <div className="cases-grid">
-          {filteredCases.map((item) => {
+          {filteredCases.map((item, idx) => {
             const IconComponent = ICON_MAP[item.icon] || Gamepad2;
             const isSolved = solvedCaseIds.includes(item.id);
             const isHighlighted = highlightedId === item.id;
+            const sectorCode = `SEC_${String(idx + 1).padStart(2, '0')}`;
 
             return (
               <button
                 key={item.id}
                 type="button"
-                className={`case-card ${isHighlighted ? 'roulette-active' : ''}`}
+                style={{ '--stagger-i': Math.min(idx, 10) }}
+                className={`case-card ${isHighlighted ? 'roulette-active' : ''} ${
+                  isSolved ? 'case-solved' : ''
+                }`}
+                onMouseEnter={() => {
+                  if (!spinning) {
+                    setScanLabel(`READY // ${item.dataframeName}`);
+                    setScrambledTick((k) => k + 1);
+                  }
+                }}
                 onClick={() => !spinning && onSelectCase(item)}
               >
                 <div>
                   <div className="case-card-top">
                     <span className="industry-label">
-                      <IconComponent size={15} className="industry-icon" />
-                      {item.industry}
+                      <IconComponent size={15} className="industry-icon" aria-hidden="true" />
+                      <span>{item.industry}</span>
                     </span>
-                    {isSolved && (
+                    {isSolved ? (
                       <span className="solved-badge">
-                        <CheckCircle2 size={13} /> Completado
+                        <CheckCircle2 size={13} aria-hidden="true" /> CLEAR
                       </span>
+                    ) : (
+                      <span className="sector-id-tag tabular">{sectorCode}</span>
                     )}
                   </div>
 
@@ -260,7 +296,7 @@ export default function ContextRoulette({
                 <div className="case-card-footer">
                   <code className="df-code-tag">df: {item.dataframeName}</code>
                   <span className="play-cta">
-                    Abrir caso <ArrowUpRight size={15} />
+                    Ejecutar <ArrowUpRight size={15} aria-hidden="true" />
                   </span>
                 </div>
               </button>

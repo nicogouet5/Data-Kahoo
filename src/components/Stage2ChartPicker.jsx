@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   XCircle
 } from 'lucide-react';
+import { playHackerSfx } from '../utils/hackerEffects.js';
 
 const CHART_ICONS = {
   bar: BarChart3,
@@ -17,7 +18,7 @@ const CHART_ICONS = {
   pie: PieChart
 };
 
-export default function Stage2ChartPicker({ currentCase, onCompleteStage }) {
+export default function Stage2ChartPicker({ currentCase, onCompleteStage, sfxEnabled }) {
   const [selectedId, setSelectedId] = useState(null);
   const [submitted, setSubmitted] = useState(false);
 
@@ -27,6 +28,8 @@ export default function Stage2ChartPicker({ currentCase, onCompleteStage }) {
 
   const handleConfirm = () => {
     if (!selectedId || submitted) return;
+    const ok = selectedId === currentCase.chartQuestion.correctChart;
+    playHackerSfx(ok ? 'success' : 'error', sfxEnabled);
     setSubmitted(true);
   };
 
@@ -39,23 +42,23 @@ export default function Stage2ChartPicker({ currentCase, onCompleteStage }) {
   return (
     <section className="stage-workspace" aria-labelledby="stage2-heading">
       <div className="stage-header">
-        <h2 id="stage2-heading">
-          Etapa 2 — ¿Qué Gráfico de Matplotlib Responde Mejor la Pregunta?
+        <h2 id="stage2-heading" tabIndex={-1}>
+          Fase 02 — Selección del Método en <code>Axes (ax)</code>
         </h2>
-        <span className="stage-points-tag">+100 pts</span>
+        <span className="stage-points-tag">+100 XP</span>
       </div>
 
       <div className="semantic-mapping-strip" aria-label="Mapeo de ejes desde el modelo semántico">
         <div className="mapping-slot">
-          <span className="map-label">Axis X (Eje Horizontal)</span>
+          <span className="map-label">AXIS_X // Eje Horizontal</span>
           <code>{xCol?.name}</code>
           <span className="map-sem">{xCol?.semanticType}</span>
         </div>
         <div className="mapping-divider" aria-hidden="true">
-          →
+          <span className="signal-pipe">═══►</span>
         </div>
         <div className="mapping-slot">
-          <span className="map-label">Axis Y (Eje Vertical)</span>
+          <span className="map-label">AXIS_Y // Eje Vertical</span>
           <code>{yCols.map((c) => c.name).join(', ')}</code>
           <span className="map-sem">{yCols.map((c) => c.semanticType).join(' + ')}</span>
         </div>
@@ -64,7 +67,7 @@ export default function Stage2ChartPicker({ currentCase, onCompleteStage }) {
       <p className="stage-prompt-question">{currentCase.chartQuestion.prompt}</p>
 
       <div className="chart-options-grid">
-        {currentCase.chartQuestion.options.map((opt) => {
+        {currentCase.chartQuestion.options.map((opt, idx) => {
           const IconComp = CHART_ICONS[opt.id] || BarChart3;
           const isSelected = selectedId === opt.id;
           const showCorrect = submitted && opt.id === currentCase.chartQuestion.correctChart;
@@ -74,23 +77,29 @@ export default function Stage2ChartPicker({ currentCase, onCompleteStage }) {
             <button
               key={opt.id}
               type="button"
+              style={{ '--stagger-i': idx }}
               className={`chart-option-card ${isSelected ? 'selected' : ''} ${
                 showCorrect ? 'correct' : ''
               } ${showWrong ? 'wrong' : ''}`}
-              onClick={() => !submitted && setSelectedId(opt.id)}
+              onClick={() => {
+                if (!submitted) {
+                  playHackerSfx('tick', sfxEnabled);
+                  setSelectedId(opt.id);
+                }
+              }}
               disabled={submitted}
             >
               <div className="chart-opt-icon">
-                <IconComp size={24} />
+                <IconComp size={24} aria-hidden="true" />
               </div>
               <div className="chart-opt-body">
                 <div className="chart-opt-title">{opt.label}</div>
                 {submitted && (isSelected || showCorrect) && (
                   <div className="chart-opt-reason">
                     {opt.id === currentCase.chartQuestion.correctChart ? (
-                      <CheckCircle2 size={16} />
+                      <CheckCircle2 size={16} aria-hidden="true" />
                     ) : (
-                      <XCircle size={16} />
+                      <XCircle size={16} aria-hidden="true" />
                     )}
                     <span>{opt.reason}</span>
                   </div>
@@ -109,7 +118,7 @@ export default function Stage2ChartPicker({ currentCase, onCompleteStage }) {
             disabled={!selectedId}
             onClick={handleConfirm}
           >
-            Confirmar Tipo de Gráfico
+            Compilar Selección Gráfica
           </button>
         </div>
       ) : (
@@ -117,8 +126,8 @@ export default function Stage2ChartPicker({ currentCase, onCompleteStage }) {
           <div>
             <h3>
               {isCorrect
-                ? '✓ Elección óptima (+100 pts)'
-                : 'Revisa la justificación del gráfico adecuado (+25 pts)'}
+                ? '[OK] Método Matplotlib óptimo (+100 XP)'
+                : '[WARN] Revisa el criterio de selección gráfica (+25 XP)'}
             </h3>
             <p>{selectedOption?.reason}</p>
           </div>
@@ -127,7 +136,7 @@ export default function Stage2ChartPicker({ currentCase, onCompleteStage }) {
             className="btn-primary"
             onClick={() => onCompleteStage(earnedPoints)}
           >
-            Continuar a Etapa 3: Duelo A vs. B <ArrowRight size={18} />
+            Avanzar a Fase 03: Duelo A vs. B <ArrowRight size={18} aria-hidden="true" />
           </button>
         </div>
       )}

@@ -1,27 +1,28 @@
-# Data-Kahoo · DataViz Arena (Ayudantía Clase 10 HBDA)
+# Data-Kahoo // ARENA_OS (Ayudantía Clase 10 HBDA)
 
-Juego competitivo e interactivo para repasar **Tipos de Variables vs. `.dtypes`**, **Modelo Semántico**, **Profundización en Matplotlib (`fig, ax = plt.subplots()`)** y **Storytelling con Datos** durante la ayudantía de *Herramientas Básicas de Data Analysis (HBDA)*.
+Videojuego competitivo estilo **Terminal Hacker (`ARENA_OS v10.4`)** para repasar **Tipos de Variables vs. `.dtypes`**, **Modelo Semántico**, **Profundización en Matplotlib (`fig, ax = plt.subplots()`)** y **Storytelling con Datos** durante la ayudantía de *Herramientas Básicas de Data Analysis (HBDA)*.
 
 - **Demo en vivo (GitHub Pages):** [https://nicogouet5.github.io/Data-Kahoo/](https://nicogouet5.github.io/Data-Kahoo/)
 
-## Estructura Pedagógica (4 Etapas por Ronda)
+## Novedades de Interfaz Hacker & Animaciones
 
-1. **Auditoría de Base de Datos (`.dtypes` vs. Modelo Semántico):** Inspecciona `df.head()`, descarta identificadores o ruido de sistema (`df.drop`), construye indicadores porcentuales cuando las variables brutas no bastan y clasifica cada columna (*Cualitativa Nominal*, *Temporal / Discreta*, *Cuantitativa Continua / Discreta*).
-2. **Selección del Gráfico en Matplotlib:** Conecta `Axis X` y `Axis Y` con el gráfico apropiado (`ax.bar`, `ax.plot` simple o multiserie, `ax.scatter`).
-3. **Duelo Visual A vs. B (`Figure` vs. `Axes`):** Compara dos salidas de código reales lado a lado (con modo **Rayos X** para inspeccionar `Figure`, `Axes` y `Axis`) evaluando las reglas de la Clase 10:
-   - `ax.set_ylim(0, 100)` en gráficos de barras para no exagerar diferencias pequeñas.
-   - `ax.set_yscale("log")` cuando los valores abarcan varios órdenes de magnitud.
-   - Color de acento único frente a barras arcoíris decorativas.
-   - `alpha=0.3` + `ax.grid(True)` en `ax.scatter()` cuando existen puntos superpuestos.
-   - `ax.legend(loc=...)`, `marker`, `linestyle` y `figsize` ancho frente a etiquetas rotadas o pisadas.
-4. **Titular Ejecutivo de Storytelling & Código Colab:** Selecciona el mejor `ax.set_title(...)` para que el gráfico se lea sin explicación adicional y copia el script Python completo listo para Google Colab o Jupyter Notebook.
+- **Pantalla de Arranque Hero ASCII Art (`AsciiBootScreen`):** Secuencia de carga tipo terminal con logo ASCII en bloques, monitor en vivo de `fig, ax = plt.subplots()`, log secuencial de módulos (`pandas`, `matplotlib`, `storytelling`) y acceso directo con `Enter` o `Esc` (reproducible en cualquier momento desde el botón `>_` de la barra superior).
+- **Animaciones Limpias en el Compositor (`View Transitions` + `@starting-style`):** Transiciones espaciales entre fases con enrutamiento accesible de foco, cascada escalonada (*stagger*) en sectores de datos, decodificación tipo *cipher scramble* al escanear misiones, barrido láser en modo **Scanner Rayos X (`fig` vs. `ax`)**, contador dinámico de XP y efectos opcionales de audio sintético (`Web Audio API`).
+- **Modo Dual Proyector / Terminal:** Alterna entre **Terminal Hacker Oscuro** (obsidiana fósforo + verde Matrix) y **Modo Proyector Claro** para salas muy iluminadas.
 
-## Atajos para Proyección en Sala
+## Estructura Pedagógica (4 Fases por Misión)
 
-- `R`: Girar la ruleta de contextos empresariales en el directorio.
-- `G`: Abrir o cerrar la **Guía Rápida — Clase 10 HBDA**.
-- `A` / `B`: Seleccionar rápidamente la Versión A o Versión B durante los duelos visuales.
-- **Modo Estudio Oscuro / Proyector Claro:** Alterna el esquema de color desde la esquina superior derecha según la iluminación de la sala.
+1. **Fase 01 — Auditoría de Base de Datos (`.dtypes` vs. Modelo Semántico):** Inspecciona `df.head()`, purga identificadores o ruido (`df.drop`), compila indicadores porcentuales cuando las variables brutas no bastan y clasifica cada columna.
+2. **Fase 02 — Selección del Método en `Axes (ax)`:** Conecta `Axis X` y `Axis Y` con el gráfico apropiado (`ax.bar`, `ax.plot` simple o multiserie, `ax.scatter`).
+3. **Fase 03 — Duelo Visual A vs. B (`Figure` vs. `Axes`):** Compara dos salidas de código reales lado a lado (con **Scanner Rayos X** para inspeccionar `Figure`, `Axes` y `Axis`) evaluando `ylim(0, 100)`, `yscale("log")`, color de acento único, `alpha=0.3` + `grid(True)`, `legend(loc=...)`, `marker`/`linestyle` y `figsize`.
+4. **Fase 04 — Titular Ejecutivo de Storytelling & Script Colab:** Selecciona el mejor `ax.set_title(...)` para que el gráfico se lea sin explicación adicional y copia el script Python completo listo para Google Colab o Jupyter.
+
+## Atajos de Teclado en Sala
+
+- `Enter` / `Esc`: Entrar o saltar la secuencia Hero ASCII de arranque.
+- `R`: Sortear misión aleatoria en el directorio de sectores.
+- `G`: Abrir o cerrar el **Manual de Campo — Clase 10 HBDA**.
+- `A` / `B`: Seleccionar rápidamente `BUILD_A` o `BUILD_B` en los duelos visuales.
 
 ## Ejecución Local
 

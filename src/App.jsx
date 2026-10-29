@@ -10,9 +10,13 @@ import {
   Sun,
   Moon,
   Check,
-  X
+  X,
+  Terminal,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { INITIAL_CASES } from './data/casesData.js';
+import AsciiBootScreen from './components/AsciiBootScreen.jsx';
 import ContextRoulette from './components/ContextRoulette.jsx';
 import Stage1Database from './components/Stage1Database.jsx';
 import Stage2ChartPicker from './components/Stage2ChartPicker.jsx';
@@ -20,8 +24,10 @@ import Stage3VisualDuel from './components/Stage3VisualDuel.jsx';
 import Stage4Storytelling from './components/Stage4Storytelling.jsx';
 import CheatSheetModal from './components/CheatSheetModal.jsx';
 import CaseCreatorModal from './components/CaseCreatorModal.jsx';
+import { runViewTransition, playHackerSfx } from './utils/hackerEffects.js';
 
 const STORAGE_KEY = 'dataviz_arena_state_v2';
+const BOOT_SESSION_KEY = 'dataviz_arena_booted_v1';
 
 const DEFAULT_TEAMS = [
   { id: 't1', name: 'Equipo 1 (Axes)', score: 0, streak: 0 },
@@ -50,11 +56,30 @@ function getEffectiveScheme() {
 export default function App() {
   const saved = loadSavedState();
 
+  const [showBoot, setShowBoot] = useState(() => {
+    try {
+      if (
+        window.location.hash === '#arena' ||
+        new URLSearchParams(window.location.search).get('noboot') === '1'
+      ) {
+        return false;
+      }
+      return sessionStorage.getItem(BOOT_SESSION_KEY) !== '1';
+    } catch {
+      return true;
+    }
+  });
+
+  const [sfxEnabled, setSfxEnabled] = useState(() =>
+    typeof saved?.sfxEnabled === 'boolean' ? saved.sfxEnabled : false
+  );
+
   const [customCases, setCustomCases] = useState(() => saved?.customCases || []);
   const [cases, setCases] = useState(() => [...(saved?.customCases || []), ...INITIAL_CASES]);
   const [currentCase, setCurrentCase] = useState(null);
   const [currentStage, setCurrentStage] = useState(1);
   const [casePoints, setCasePoints] = useState(0);
+  const [lastXpGain, setLastXpGain] = useState(null);
   const [solvedCaseIds, setSolvedCaseIds] = useState(() => saved?.solvedCaseIds || []);
 
   const [tournamentMode, setTournamentMode] = useState(() =>
@@ -73,7 +98,7 @@ export default function App() {
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [renderedScheme, setRenderedScheme] = useState(() => getEffectiveScheme());
 
-  // Persist tournament & custom cases in localStorage for static GitHub Pages autonomy
+  // Persist tournament, SFX & custom cases in localStorage for static GitHub Pages autonomy
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -83,13 +108,14 @@ export default function App() {
           activeTeamIndex,
           tournamentMode,
           solvedCaseIds,
-          customCases
+          customCases,
+          sfxEnabled
         })
       );
     } catch {
       // Ignore storage quota / privacy mode errors
     }
-  }, [teams, activeTeamIndex, tournamentMode, solvedCaseIds, customCases]);
+  }, [teams, activeTeamIndex, tournamentMode, solvedCaseIds, customCases, sfxEnabled]);
 
   // Optional sync with local Express API when running locally
   useEffect(() => {
@@ -124,18 +150,49 @@ export default function App() {
 
   // Global keyboard shortcut: G opens Cheat Sheet when not typing in an input
   useEffect(() => {
+    if (showBoot) return;
     const onKeyDown = (e) => {
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key.toLowerCase() === 'g' && !creatorOpen) {
         e.preventDefault();
+        playHackerSfx('tick', sfxEnabled);
         setCheatSheetOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [creatorOpen]);
+  }, [creatorOpen, showBoot, sfxEnabled]);
+
+  const handleEnterFromBoot = () => {
+    try {
+      sessionStorage.setItem(BOOT_SESSION_KEY, '1');
+    } catch {
+      // Ignore sessionStorage restrictions
+    }
+    runViewTransition(
+      () => {
+        setShowBoot(false);
+      },
+      currentCase ? '#case-briefing-heading' : '#lobby-main-title'
+    );
+  };
+
+  const handleReplayBoot = () => {
+    playHackerSfx('scan', sfxEnabled);
+    runViewTransition(() => {
+      setShowBoot(true);
+    }, '#boot-hero-heading');
+  };
+
+  const handleToggleSfx = () => {
+    const next = !sfxEnabled;
+    setSfxEnabled(next);
+    if (next) {
+      playHackerSfx('lock', true);
+    }
+  };
 
   const handleToggleColorScheme = () => {
     const current = getEffectiveScheme();
@@ -156,11 +213,13 @@ export default function App() {
     } catch {
       if (meta) meta.content = target;
     }
+    playHackerSfx('tick', sfxEnabled);
     setRenderedScheme(target);
   };
 
   const awardPointsToActiveTeam = (pts) => {
     setCasePoints((prev) => prev + pts);
+    setLastXpGain({ pts, key: Date.now() });
     setTeams((prev) =>
       prev.map((t, idx) =>
         idx === activeTeamIndex
@@ -175,40 +234,71 @@ export default function App() {
   };
 
   const handleSelectCase = (selected) => {
-    setCurrentCase(selected);
-    setCurrentStage(1);
-    setCasePoints(0);
+    playHackerSfx('lock', sfxEnabled);
+    runViewTransition(() => {
+      setCurrentCase(selected);
+      setCurrentStage(1);
+      setCasePoints(0);
+    }, '#case-briefing-heading');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleReturnToLobby = () => {
+    playHackerSfx('tick', sfxEnabled);
+    runViewTransition(() => {
+      setCurrentCase(null);
+    }, '#lobby-main-title');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleJumpStage = (stageNum) => {
+    if (stageNum === currentStage) return;
+    playHackerSfx('tick', sfxEnabled);
+    runViewTransition(() => {
+      setCurrentStage(stageNum);
+    }, `#stage${stageNum}-heading`);
+  };
+
   const handleCompleteStage1 = (pts) => {
-    awardPointsToActiveTeam(pts);
-    setCurrentStage(2);
+    playHackerSfx('success', sfxEnabled);
+    runViewTransition(() => {
+      awardPointsToActiveTeam(pts);
+      setCurrentStage(2);
+    }, '#stage2-heading');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCompleteStage2 = (pts) => {
-    awardPointsToActiveTeam(pts);
-    setCurrentStage(3);
+    playHackerSfx('success', sfxEnabled);
+    runViewTransition(() => {
+      awardPointsToActiveTeam(pts);
+      setCurrentStage(3);
+    }, '#stage3-heading');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCompleteStage3 = (pts) => {
-    awardPointsToActiveTeam(pts);
-    setCurrentStage(4);
+    playHackerSfx('success', sfxEnabled);
+    runViewTransition(() => {
+      awardPointsToActiveTeam(pts);
+      setCurrentStage(4);
+    }, '#stage4-heading');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleFinishCase = (pts) => {
-    awardPointsToActiveTeam(pts);
-    if (currentCase && !solvedCaseIds.includes(currentCase.id)) {
-      setSolvedCaseIds((prev) => [...prev, currentCase.id]);
-    }
-    if (tournamentMode && teams.length > 0) {
-      setActiveTeamIndex((prev) => (prev + 1) % teams.length);
-    }
-    setCurrentCase(null);
-    setCurrentStage(1);
+    playHackerSfx('boot', sfxEnabled);
+    runViewTransition(() => {
+      awardPointsToActiveTeam(pts);
+      if (currentCase && !solvedCaseIds.includes(currentCase.id)) {
+        setSolvedCaseIds((prev) => [...prev, currentCase.id]);
+      }
+      if (tournamentMode && teams.length > 0) {
+        setActiveTeamIndex((prev) => (prev + 1) % teams.length);
+      }
+      setCurrentCase(null);
+      setCurrentStage(1);
+    }, '#lobby-main-title');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -248,9 +338,11 @@ export default function App() {
   };
 
   const handleResetScores = () => {
+    playHackerSfx('tick', sfxEnabled);
     setTeams((prev) => prev.map((t) => ({ ...t, score: 0, streak: 0 })));
     setSolvedCaseIds([]);
     setActiveTeamIndex(0);
+    setLastXpGain(null);
   };
 
   const handleCreateCustomCase = (newCase) => {
@@ -270,132 +362,186 @@ export default function App() {
         <button
           type="button"
           className="brand-button"
-          onClick={() => setCurrentCase(null)}
-          title="Volver al directorio de casos"
+          onClick={() => {
+            if (showBoot) {
+              handleEnterFromBoot();
+            } else if (currentCase) {
+              handleReturnToLobby();
+            }
+          }}
+          title="Volver a la terminal principal de misiones"
         >
           <span className="brand-mark" aria-hidden="true">
-            DK
+            &gt;_
           </span>
           <span>
-            <span className="brand-title">Data-Kahoo · DataViz Arena</span>
-            <span className="brand-sub">Ayudantía Clase 10 HBDA · Matplotlib & Storytelling</span>
+            <span className="brand-title">DATA-KAHOO // ARENA_OS</span>
+            <span className="brand-sub">SYS.10 HBDA · Matplotlib &amp; Storytelling</span>
           </span>
         </button>
 
-        <div className="scoreboard-strip">
-          <button
-            type="button"
-            className={`mode-toggle-btn ${tournamentMode ? 'active' : ''}`}
-            onClick={() => setTournamentMode(!tournamentMode)}
-            title="Alternar entre Modo Torneo por Equipos y Práctica Individual"
-          >
-            <Users size={15} />
-            {tournamentMode ? 'Torneo Equipos' : 'Individual'}
-          </button>
+        {!showBoot && (
+          <div className="scoreboard-strip">
+            <button
+              type="button"
+              className={`mode-toggle-btn ${tournamentMode ? 'active' : ''}`}
+              onClick={() => {
+                playHackerSfx('tick', sfxEnabled);
+                setTournamentMode(!tournamentMode);
+              }}
+              title="Alternar entre Modo Torneo por Equipos y Práctica Individual"
+            >
+              <Users size={15} aria-hidden="true" />
+              {tournamentMode ? 'Torneo Equipos' : 'Solo_Op'}
+            </button>
 
-          {tournamentMode && (
-            <div className="teams-bar">
-              {teams.map((team, idx) => {
-                const isTurn = idx === activeTeamIndex;
-                if (editingTeamIdx === idx) {
+            {tournamentMode && (
+              <div className="teams-bar">
+                {teams.map((team, idx) => {
+                  const isTurn = idx === activeTeamIndex;
+                  if (editingTeamIdx === idx) {
+                    return (
+                      <form
+                        key={team.id}
+                        className="team-inline-editor"
+                        onSubmit={commitRenameTeam}
+                      >
+                        <input
+                          type="text"
+                          className="team-inline-input"
+                          value={teamDraftName}
+                          onChange={(e) => setTeamDraftName(e.target.value)}
+                          aria-label="Nuevo nombre del equipo"
+                          autoFocus
+                        />
+                        <button
+                          type="submit"
+                          className="icon-control-btn"
+                          aria-label="Guardar nombre"
+                        >
+                          <Check size={14} aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-control-btn"
+                          onClick={() => setEditingTeamIdx(null)}
+                          aria-label="Cancelar edición"
+                        >
+                          <X size={14} aria-hidden="true" />
+                        </button>
+                      </form>
+                    );
+                  }
+
                   return (
-                    <form key={team.id} className="team-inline-editor" onSubmit={commitRenameTeam}>
-                      <input
-                        type="text"
-                        className="team-inline-input"
-                        value={teamDraftName}
-                        onChange={(e) => setTeamDraftName(e.target.value)}
-                        aria-label="Nuevo nombre del equipo"
-                        autoFocus
-                      />
-                      <button
-                        type="submit"
-                        className="icon-control-btn"
-                        aria-label="Guardar nombre"
-                      >
-                        <Check size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        className="icon-control-btn"
-                        onClick={() => setEditingTeamIdx(null)}
-                        aria-label="Cancelar edición"
-                      >
-                        <X size={14} />
-                      </button>
-                    </form>
+                    <button
+                      key={team.id}
+                      type="button"
+                      className={`team-chip ${isTurn ? 'active-turn' : ''}`}
+                      onClick={() => {
+                        playHackerSfx('tick', sfxEnabled);
+                        setActiveTeamIndex(idx);
+                      }}
+                      onDoubleClick={() => startRenameTeam(idx)}
+                      title="Clic para asignar el turno · Doble clic para renombrar"
+                    >
+                      {isTurn && <span className="team-turn-dot" aria-hidden="true" />}
+                      <span className="team-name">{team.name}</span>
+                      <span className="team-pts">{team.score} XP</span>
+                      {team.streak > 1 && (
+                        <span className="streak-tag">
+                          <Flame size={12} aria-hidden="true" /> x{team.streak}
+                        </span>
+                      )}
+                      {isTurn && lastXpGain && (
+                        <span key={lastXpGain.key} className="xp-pop-badge" aria-hidden="true">
+                          +{lastXpGain.pts}
+                        </span>
+                      )}
+                    </button>
                   );
-                }
+                })}
 
-                return (
-                  <button
-                    key={team.id}
-                    type="button"
-                    className={`team-chip ${isTurn ? 'active-turn' : ''}`}
-                    onClick={() => setActiveTeamIndex(idx)}
-                    onDoubleClick={() => startRenameTeam(idx)}
-                    title="Clic para asignar el turno · Doble clic para renombrar"
-                  >
-                    {isTurn && <span className="team-turn-dot" aria-hidden="true" />}
-                    <span className="team-name">{team.name}</span>
-                    <span className="team-pts">{team.score} pts</span>
-                    {team.streak > 1 && (
-                      <span className="streak-tag">
-                        <Flame size={12} /> x{team.streak}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-
-              {addingTeam ? (
-                <form className="team-inline-editor" onSubmit={commitAddTeam}>
-                  <input
-                    type="text"
-                    className="team-inline-input"
-                    value={teamDraftName}
-                    onChange={(e) => setTeamDraftName(e.target.value)}
-                    aria-label="Nombre del nuevo equipo"
-                    autoFocus
-                  />
-                  <button type="submit" className="icon-control-btn" aria-label="Confirmar equipo">
-                    <Check size={14} />
-                  </button>
+                {addingTeam ? (
+                  <form className="team-inline-editor" onSubmit={commitAddTeam}>
+                    <input
+                      type="text"
+                      className="team-inline-input"
+                      value={teamDraftName}
+                      onChange={(e) => setTeamDraftName(e.target.value)}
+                      aria-label="Nombre del nuevo equipo"
+                      autoFocus
+                    />
+                    <button
+                      type="submit"
+                      className="icon-control-btn"
+                      aria-label="Confirmar equipo"
+                    >
+                      <Check size={14} aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-control-btn"
+                      onClick={() => setAddingTeam(false)}
+                      aria-label="Cancelar"
+                    >
+                      <X size={14} aria-hidden="true" />
+                    </button>
+                  </form>
+                ) : (
                   <button
                     type="button"
                     className="icon-control-btn"
-                    onClick={() => setAddingTeam(false)}
-                    aria-label="Cancelar"
+                    onClick={startAddTeam}
+                    aria-label="Agregar nuevo equipo"
+                    title="Agregar nuevo equipo"
                   >
-                    <X size={14} />
+                    <Plus size={15} aria-hidden="true" />
                   </button>
-                </form>
-              ) : (
+                )}
+
                 <button
                   type="button"
                   className="icon-control-btn"
-                  onClick={startAddTeam}
-                  aria-label="Agregar nuevo equipo"
-                  title="Agregar nuevo equipo"
+                  onClick={handleResetScores}
+                  aria-label="Reiniciar marcador y progreso"
+                  title="Reiniciar marcador y casos completados"
                 >
-                  <Plus size={15} />
+                  <RotateCcw size={14} aria-hidden="true" />
                 </button>
-              )}
-
-              <button
-                type="button"
-                className="icon-control-btn"
-                onClick={handleResetScores}
-                aria-label="Reiniciar marcador y progreso"
-                title="Reiniciar marcador y casos completados"
-              >
-                <RotateCcw size={14} />
-              </button>
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="nav-right-actions">
+          {!showBoot && (
+            <button
+              type="button"
+              className="icon-control-btn"
+              onClick={handleReplayBoot}
+              aria-label="Ver secuencia de arranque ASCII"
+              title="Reproducir pantalla Hero ASCII de arranque"
+            >
+              <Terminal size={15} aria-hidden="true" />
+            </button>
+          )}
+
+          <button
+            type="button"
+            className={`icon-control-btn ${sfxEnabled ? 'sfx-active' : ''}`}
+            onClick={handleToggleSfx}
+            aria-pressed={sfxEnabled}
+            aria-label={sfxEnabled ? 'Silenciar efectos de terminal' : 'Activar efectos de terminal'}
+            title={sfxEnabled ? 'Audio táctico activado' : 'Activar audio táctico de terminal'}
+          >
+            {sfxEnabled ? (
+              <Volume2 size={15} aria-hidden="true" />
+            ) : (
+              <VolumeX size={15} aria-hidden="true" />
+            )}
+          </button>
+
           <button
             type="button"
             className="icon-control-btn"
@@ -403,23 +549,30 @@ export default function App() {
             aria-label={
               renderedScheme === 'dark'
                 ? 'Cambiar a modo claro para sala iluminada'
-                : 'Cambiar a modo oscuro de estudio'
+                : 'Cambiar a modo terminal hacker oscuro'
             }
             title={
               renderedScheme === 'dark'
                 ? 'Modo Proyector Claro (Sala Iluminada)'
-                : 'Modo Estudio Oscuro'
+                : 'Modo Terminal Hacker Oscuro'
             }
           >
-            {renderedScheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            {renderedScheme === 'dark' ? (
+              <Sun size={16} aria-hidden="true" />
+            ) : (
+              <Moon size={16} aria-hidden="true" />
+            )}
           </button>
 
           <button
             type="button"
             className="btn-header-secondary"
-            onClick={() => setCheatSheetOpen(true)}
+            onClick={() => {
+              playHackerSfx('tick', sfxEnabled);
+              setCheatSheetOpen(true);
+            }}
           >
-            <BookOpen size={16} />
+            <BookOpen size={16} aria-hidden="true" />
             <span>Guía Clase 10</span>
             <kbd className="kbd-hint">G</kbd>
           </button>
@@ -427,13 +580,19 @@ export default function App() {
       </header>
 
       <main className="main-container">
-        {!currentCase ? (
+        {showBoot ? (
+          <AsciiBootScreen onEnterArena={handleEnterFromBoot} sfxEnabled={sfxEnabled} />
+        ) : !currentCase ? (
           <ContextRoulette
             cases={cases}
             solvedCaseIds={solvedCaseIds}
             onSelectCase={handleSelectCase}
-            onOpenCreator={() => setCreatorOpen(true)}
+            onOpenCreator={() => {
+              playHackerSfx('tick', sfxEnabled);
+              setCreatorOpen(true);
+            }}
             modalOpen={cheatSheetOpen || creatorOpen}
+            sfxEnabled={sfxEnabled}
           />
         ) : (
           <div className="mission-arena-wrapper">
@@ -441,17 +600,17 @@ export default function App() {
               <button
                 type="button"
                 className="btn-back-lobby"
-                onClick={() => setCurrentCase(null)}
+                onClick={handleReturnToLobby}
               >
-                <ArrowLeft size={15} /> Volver al Directorio
+                <ArrowLeft size={15} aria-hidden="true" /> Volver al Directorio
               </button>
 
               <nav className="stage-stepper" aria-label="Etapas de la misión">
                 {[
-                  { num: 1, label: '1. BBD & Variables' },
-                  { num: 2, label: '2. Elegir Gráfico' },
-                  { num: 3, label: '3. Duelo A vs. B' },
-                  { num: 4, label: '4. Storytelling' }
+                  { num: 1, label: '01 // BBD & Variables' },
+                  { num: 2, label: '02 // Elegir Gráfico' },
+                  { num: 3, label: '03 // Duelo A vs. B' },
+                  { num: 4, label: '04 // Storytelling' }
                 ].map((st) => (
                   <button
                     key={st.num}
@@ -460,7 +619,7 @@ export default function App() {
                       currentStage > st.num ? 'done' : ''
                     }`}
                     aria-current={currentStage === st.num ? 'step' : undefined}
-                    onClick={() => setCurrentStage(st.num)}
+                    onClick={() => handleJumpStage(st.num)}
                   >
                     {st.label}
                   </button>
@@ -469,9 +628,9 @@ export default function App() {
 
               {tournamentMode && (
                 <div className="active-turn-readout">
-                  <Trophy size={15} />
+                  <Trophy size={15} aria-hidden="true" />
                   <span>
-                    Turno: <strong>{teams[activeTeamIndex]?.name}</strong> · +{casePoints} pts
+                    OP: <strong>{teams[activeTeamIndex]?.name}</strong> · +{casePoints} XP
                   </span>
                 </div>
               )}
@@ -479,18 +638,18 @@ export default function App() {
 
             <section className="case-briefing-section" aria-labelledby="case-briefing-heading">
               <div className="briefing-header-row">
-                <h1 id="case-briefing-heading" className="briefing-title">
+                <h1 id="case-briefing-heading" className="briefing-title" tabIndex={-1}>
                   {currentCase.title}
                 </h1>
                 <div className="briefing-meta-inline">
                   <span className="briefing-company-badge">{currentCase.company}</span>
-                  <span aria-hidden="true">·</span>
+                  <span aria-hidden="true">//</span>
                   <span>{currentCase.industry}</span>
                 </div>
               </div>
               <p className="briefing-context">{currentCase.context}</p>
               <div className="briefing-question-bar">
-                <strong>Pregunta de negocio:</strong> {currentCase.businessQuestion}
+                <strong>TARGET_QUERY:</strong> {currentCase.businessQuestion}
               </div>
             </section>
 
@@ -499,6 +658,7 @@ export default function App() {
                 key={`${currentCase.id}-s1`}
                 currentCase={currentCase}
                 onCompleteStage={handleCompleteStage1}
+                sfxEnabled={sfxEnabled}
               />
             )}
             {currentStage === 2 && (
@@ -506,6 +666,7 @@ export default function App() {
                 key={`${currentCase.id}-s2`}
                 currentCase={currentCase}
                 onCompleteStage={handleCompleteStage2}
+                sfxEnabled={sfxEnabled}
               />
             )}
             {currentStage === 3 && (
@@ -513,6 +674,7 @@ export default function App() {
                 key={`${currentCase.id}-s3`}
                 currentCase={currentCase}
                 onCompleteStage={handleCompleteStage3}
+                sfxEnabled={sfxEnabled}
               />
             )}
             {currentStage === 4 && (
@@ -521,6 +683,7 @@ export default function App() {
                 currentCase={currentCase}
                 casePointsSoFar={casePoints}
                 onFinishCase={handleFinishCase}
+                sfxEnabled={sfxEnabled}
               />
             )}
           </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, BookOpen, Layers, GitBranch, Code, Database } from 'lucide-react';
 import { CHEAT_SHEET_DATA } from '../data/casesData.js';
+import { closeTopLayer } from '../utils/hackerEffects.js';
 
 export default function CheatSheetModal({ isOpen, onClose }) {
   const [activeTab, setActiveTab] = useState('tree');
@@ -11,9 +12,10 @@ export default function CheatSheetModal({ isOpen, onClose }) {
     if (!dialog) return;
 
     if (isOpen && !dialog.open) {
+      dialog.removeAttribute('data-closing');
       dialog.showModal();
     } else if (!isOpen && dialog.open) {
-      dialog.close();
+      closeTopLayer(dialog);
     }
   }, [isOpen]);
 
@@ -22,10 +24,18 @@ export default function CheatSheetModal({ isOpen, onClose }) {
     if (!dialog) return;
 
     const handleClose = () => {
+      dialog.removeAttribute('data-closing');
       dialog.returnValue = '';
       onClose();
     };
+
+    const handleCancel = (e) => {
+      e.preventDefault();
+      closeTopLayer(dialog);
+    };
+
     dialog.addEventListener('close', handleClose);
+    dialog.addEventListener('cancel', handleCancel);
 
     // Fallback for browsers where <dialog closedby="any"> is not yet supported (e.g. Safari)
     let cleanupLightDismiss = () => {};
@@ -40,7 +50,7 @@ export default function CheatSheetModal({ isOpen, onClose }) {
       };
       const onPointerUp = (e) => {
         if (pressedOutside && isOutside(e) && dialog.open) {
-          dialog.close();
+          closeTopLayer(dialog);
         }
       };
       dialog.addEventListener('pointerdown', onPointerDown);
@@ -53,6 +63,7 @@ export default function CheatSheetModal({ isOpen, onClose }) {
 
     return () => {
       dialog.removeEventListener('close', handleClose);
+      dialog.removeEventListener('cancel', handleCancel);
       cleanupLightDismiss();
     };
   }, [onClose]);
@@ -66,22 +77,20 @@ export default function CheatSheetModal({ isOpen, onClose }) {
     >
       <div className="modal-header">
         <div className="modal-title-group">
-          <BookOpen size={22} className="modal-accent-icon" />
+          <BookOpen size={22} className="modal-accent-icon" aria-hidden="true" />
           <div>
-            <h2 id="cheatsheet-dialog-title">Guía Rápida — Clase 10 HBDA</h2>
+            <h2 id="cheatsheet-dialog-title">Manual de Campo — Clase 10 HBDA</h2>
             <p>Profundización en Matplotlib, Tipos de Variables y Reglas de Storytelling</p>
           </div>
         </div>
-        <form method="dialog">
-          <button
-            type="submit"
-            value="cancel"
-            className="modal-close-btn"
-            aria-label="Cerrar guía"
-          >
-            <X size={18} />
-          </button>
-        </form>
+        <button
+          type="button"
+          className="modal-close-btn"
+          onClick={() => closeTopLayer(dialogRef.current)}
+          aria-label="Cerrar guía"
+        >
+          <X size={18} aria-hidden="true" />
+        </button>
       </div>
 
       <div className="modal-tabs" role="tablist" aria-label="Secciones de la guía">
@@ -93,7 +102,7 @@ export default function CheatSheetModal({ isOpen, onClose }) {
           onClick={() => setActiveTab('tree')}
           autoFocus
         >
-          <GitBranch size={15} /> ¿Qué Gráfico Usar?
+          <GitBranch size={15} aria-hidden="true" /> ¿Qué Gráfico Usar?
         </button>
         <button
           type="button"
@@ -102,7 +111,7 @@ export default function CheatSheetModal({ isOpen, onClose }) {
           className={`tab-btn ${activeTab === 'vars' ? 'active' : ''}`}
           onClick={() => setActiveTab('vars')}
         >
-          <Database size={15} /> Variables vs. .dtypes
+          <Database size={15} aria-hidden="true" /> Variables vs. .dtypes
         </button>
         <button
           type="button"
@@ -111,7 +120,7 @@ export default function CheatSheetModal({ isOpen, onClose }) {
           className={`tab-btn ${activeTab === 'anatomy' ? 'active' : ''}`}
           onClick={() => setActiveTab('anatomy')}
         >
-          <Layers size={15} /> Figure (fig) vs. Axes (ax)
+          <Layers size={15} aria-hidden="true" /> Figure (fig) vs. Axes (ax)
         </button>
         <button
           type="button"
@@ -120,7 +129,7 @@ export default function CheatSheetModal({ isOpen, onClose }) {
           className={`tab-btn ${activeTab === 'syntax' ? 'active' : ''}`}
           onClick={() => setActiveTab('syntax')}
         >
-          <Code size={15} /> De plt. a ax.set_
+          <Code size={15} aria-hidden="true" /> De plt. a ax.set_
         </button>
       </div>
 
