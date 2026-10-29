@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualización de Datos & Storytelling | Ayudantía HBDA</title>
+  
+  <!-- Fonts: Plus Jakarta Sans, Fraunces, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+            serif: ['"Fraunces"', 'Georgia', 'serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace']
+          },
+          colors: {
+            paper: {
+              DEFAULT: '#F8FAFC',
+              raised: '#FFFFFF',
+              dark: '#0B0F19',
+              raisedDark: '#131B2E',
+              border: '#E2E8F0',
+              borderDark: '#1E293B'
+            },
+            accent: {
+              DEFAULT: '#EA580C',
+              hover: '#C2410C',
+              soft: '#FFEDD5',
+              softDark: '#431407'
+            },
+            brand: {
+              DEFAULT: '#0284C7',
+              soft: '#E0F2FE',
+              softDark: '#082F49'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Impeccable Custom Polish */
+    ::selection {
+      background-color: #EA580C;
+      color: #FFFFFF;
+    }
+    
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    .editorial-grid {
+      background-size: 32px 32px;
+      background-image: radial-gradient(circle, rgba(148, 163, 184, 0.15) 1px, transparent 1px);
+    }
+    .dark .editorial-grid {
+      background-image: radial-gradient(circle, rgba(71, 85, 105, 0.25) 1px, transparent 1px);
+    }
+
+    /* Track transitions */
+    .slide-track {
+      display: flex;
+      height: 100%;
+      width: 100%;
+      transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: transform;
+    }
+
+    .slide {
+      flex: 0 0 100vw;
+      height: 100%;
+      overflow-y: auto;
+      padding: 5rem 2rem 5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      box-sizing: border-box;
+    }
+
+    @media (min-height: 768px) {
+      .slide {
+        justify-content: center;
+        padding-top: 4rem;
+        padding-bottom: 5rem;
+      }
+    }
+
+    /* Custom Scrollbar */
+    .slide::-webkit-scrollbar {
+      width: 6px;
+    }
+    .slide::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .slide::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.4);
+      border-radius: 9999px;
+    }
+
+    /* Soft natural shadows */
+    .impeccable-card {
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.04), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .dark .impeccable-card {
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+    }
+
+    .code-block {
+      background: #0F172A;
+      color: #E2E8F0;
+      border: 1px solid #1E293B;
+    }
+  </style>
+</head>
+
+<body class="bg-paper text-slate-800 dark:bg-paper-dark dark:text-slate-100 editorial-grid font-sans antialiased select-none">
+
+  <!-- TOP HEADER / PROGRESS BAR -->
+  <header class="fixed top-0 left-0 right-0 z-40 bg-paper/85 dark:bg-paper-dark/85 backdrop-blur-md border-b border-paper-border dark:border-paper-borderDark px-6 py-3 flex items-center justify-between transition-colors">
+    <div class="flex items-center space-x-3">
+      <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-accent text-white font-mono text-xs font-bold">
+        HB
+      </span>
+      <div>
+        <h1 class="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400">Herramientas de Data Analysis</h1>
+        <p class="text-sm font-bold text-slate-900 dark:text-white leading-tight">Visualización & Storytelling de Datos</p>
+      </div>
+    </div>
+
+    <!-- Center Slide Counter -->
+    <div class="flex items-center space-x-2 bg-slate-100 dark:bg-paper-raisedDark px-3 py-1.5 rounded-full border border-paper-border dark:border-paper-borderDark text-xs font-mono">
+      <span id="currentSlideNum" class="font-bold text-accent">01</span>
+      <span class="text-slate-400">/</span>
+      <span id="totalSlidesNum" class="text-slate-500 dark:text-slate-400">11</span>
+    </div>
+
+    <!-- Right Controls -->
+    <div class="flex items-center space-x-2">
+      <button id="toggleNotesBtn" title="Ver notas de cátedra (N)" class="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/60 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      </button>
+
+      <button id="toggleThemeBtn" title="Cambiar tema claro/oscuro (T)" class="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/60 transition-colors">
+        <svg id="themeIconSun" class="w-4 h-4 hidden dark:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        <svg id="themeIconMoon" class="w-4 h-4 block dark:hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+      </button>
+
+      <button id="toggleFullscreenBtn" title="Pantalla completa (F)" class="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/60 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+      </button>
+
+      <a href="http://127.0.0.1:5173" target="_blank" class="hidden sm:inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-brand text-white hover:bg-brand/90 transition-colors text-xs font-semibold">
+        <span>Ir a Data-Kahoo</span>
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+      </a>
+    </div>
+
+    <!-- Progress indicator bar -->
+    <div class="absolute bottom-0 left-0 h-[2px] bg-accent transition-all duration-300" id="progressBar" style="width: 9%;"></div>
+  </header>
+
+  <!-- MAIN SLIDES TRACK -->
+  <div class="deck relative w-screen h-screen overflow-hidden">
+    <div id="slideTrack" class="slide-track">
+
+      <!-- SLIDE 1: PORTADA -->
+      <section class="slide" data-slide="1" data-notes="Bienvenida a la ayudantía. Hoy conectamos lo que aprendieron en pandas con la creación de valor en visualizaciones. Antes de competir en Data-Kahoo, repasaremos el criterio para saber qué gráfico defender en un informe de negocio.">
+        <div class="max-w-4xl w-full text-center space-y-8 my-auto">
+          <div class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-accent-soft text-accent dark:bg-accent-softDark dark:text-orange-300 text-xs font-semibold border border-accent/20">
+            <span>Sesión Especial de Cierre · Unidad de Visualización</span>
+          </div>
+
+          <h1 class="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-slate-900 dark:text-white leading-[1.08] text-balance">
+            Visualización de Datos &amp; Storytelling
+          </h1>
+
+          <p class="max-w-2xl mx-auto text-base sm:text-xl text-slate-600 dark:text-slate-300 font-normal leading-relaxed text-balance">
+            Cómo elegir el gráfico correcto según el tipo semántico de cada variable, construir argumentos honestos y evitar trampas visuales comunes.
+          </p>
+
+          <div class="pt-4 flex flex-wrap items-center justify-center gap-4 text-xs sm:text-sm font-mono text-slate-500 dark:text-slate-400">
+            <span class="inline-flex items-center px-3 py-1.5 rounded-md bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark">
+              ⌨️ Usa <kbd class="px-1.5 py-0.5 mx-1 bg-slate-200 dark:bg-slate-700 rounded text-slate-800 dark:text-slate-200 font-bold">→</kbd> o <kbd class="px-1.5 py-0.5 mx-1 bg-slate-200 dark:bg-slate-700 rounded text-slate-800 dark:text-slate-200 font-bold">Espacio</kbd> para avanzar
+            </span>
+            <span class="inline-flex items-center px-3 py-1.5 rounded-md bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark">
+              🎯 11 Diapositivas Interactivas
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 2: TIPO TÉCNICO VS TIPO SEMÁNTICO -->
+      <section class="slide" data-slide="2" data-notes="Recalcar: que df.dtypes diga int64 u object no dice si la columna se debe sumar, promediar o segmentar. Un RUT o un ID de tienda son numéricos técnicamente pero son identificadores semánticos.">
+        <div class="max-w-5xl w-full space-y-6">
+          <div class="space-y-1">
+            <h2 class="font-serif text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
+              Tipo Técnico vs. Tipo Semántico
+            </h2>
+            <p class="text-slate-600 dark:text-slate-300 text-sm sm:text-base">
+              Lo que dice <code class="font-mono text-xs bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded text-accent font-semibold">df.dtypes</code> no determina qué hacer con la variable. Primero se entiende el significado de negocio.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Box 1: Tipos Técnicos -->
+            <div class="p-5 rounded-xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark impeccable-card space-y-3">
+              <div class="flex items-center justify-between pb-2 border-b border-paper-border dark:border-paper-borderDark">
+                <span class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">Tipo Técnico (Pandas)</span>
+                <span class="text-xs font-mono text-rose-500 font-semibold">Insuficiente para decidir</span>
+              </div>
+              <ul class="space-y-2 text-xs sm:text-sm font-mono text-slate-600 dark:text-slate-300">
+                <li class="flex items-start space-x-2">
+                  <span class="text-rose-500">✕</span>
+                  <span><strong class="text-slate-900 dark:text-white">int64:</strong> Puede ser ventas, edad o... el código postal / ID de usuario.</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                  <span class="text-rose-500">✕</span>
+                  <span><strong class="text-slate-900 dark:text-white">float64:</strong> Margen neto, temperatura o coordenadas GPS.</span>
+                </li>
+                <li class="flex items-start space-x-2">
+                  <span class="text-rose-500">✕</span>
+                  <span><strong class="text-slate-900 dark:text-white">object / string:</strong> Categoría de producto o identificador alfanumérico único.</span>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Box 2: Tipos Semánticos -->
+            <div class="p-5 rounded-xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark impeccable-card space-y-3">
+              <div class="flex items-center justify-between pb-2 border-b border-paper-border dark:border-paper-borderDark">
+                <span class="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">Tipo Semántico (Negocio)</span>
+                <span class="text-xs font-mono text-emerald-500 font-semibold">Define el gráfico correcto</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60">
+                  <div class="font-bold text-accent">Identificador</div>
+                  <div class="text-slate-500 dark:text-slate-400 mt-0.5">ID cliente, SKU, RUT. No se grafica ni promedia.</div>
+                </div>
+                <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60">
+                  <div class="font-bold text-brand">Cualitativa Nominal</div>
+                  <div class="text-slate-500 dark:text-slate-400 mt-0.5">Comuna, Canal. Sin orden intrínseco.</div>
+                </div>
+                <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60">
+                  <div class="font-bold text-emerald-600 dark:text-emerald-400">Cualitativa Ordinal</div>
+                  <div class="text-slate-500 dark:text-slate-400 mt-0.5">Satisfacción (1-5), Talla (S,M,L), Prioridad.</div>
+                </div>
+                <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60">
+                  <div class="font-bold text-purple-600 dark:text-purple-400">Cuantitativa (Cont/Disc)</div>
+                  <div class="text-slate-500 dark:text-slate-400 mt-0.5">Ventas CLP, visitas, tiempo de espera.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Matriz interactiva de ejemplo -->
+          <div class="p-4 rounded-xl bg-slate-100 dark:bg-paper-raisedDark/80 border border-paper-border dark:border-paper-borderDark text-xs">
+            <div class="font-semibold text-slate-700 dark:text-slate-200 mb-2 flex items-center space-x-2">
+              <span class="w-2 h-2 rounded-full bg-accent"></span>
+              <span>Caso Real: ¿Qué operación tiene sentido de negocio?</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left font-mono">
+                <thead class="text-slate-400 border-b border-slate-300 dark:border-slate-700">
+                  <tr>
+                    <th class="pb-1.5 font-semibold">Columna</th>
+                    <th class="pb-1.5 font-semibold">dtype</th>
+                    <th class="pb-1.5 font-semibold">Tipo Semántico</th>
+                    <th class="pb-1.5 font-semibold">Operación Válida</th>
+                    <th class="pb-1.5 font-semibold text-rose-500">Error Típico</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-800 text-slate-600 dark:text-slate-300">
+                  <tr>
+                    <td class="py-1.5 font-bold text-slate-900 dark:text-white">id_tienda</td>
+                    <td class="py-1.5 text-slate-500">int64</td>
+                    <td class="py-1.5 text-accent font-semibold">Identificador</td>
+                    <td class="py-1.5">.nunique(), .count()</td>
+                    <td class="py-1.5 text-rose-500">Calcular promedio de IDs</td>
+                  </tr>
+                  <tr>
+                    <td class="py-1.5 font-bold text-slate-900 dark:text-white">canal_venta</td>
+                    <td class="py-1.5 text-slate-500">object</td>
+                    <td class="py-1.5 text-brand font-semibold">Nominal</td>
+                    <td class="py-1.5">.value_counts(), groupby</td>
+                    <td class="py-1.5 text-rose-500">Unir con gráfico de líneas</td>
+                  </tr>
+                  <tr>
+                    <td class="py-1.5 font-bold text-slate-900 dark:text-white">ventas_clp</td>
+                    <td class="py-1.5 text-slate-500">float64</td>
+                    <td class="py-1.5 text-purple-500 font-semibold">Cuantitativa Cont.</td>
+                    <td class="py-1.5">.sum(), .mean(), histograma</td>
+                    <td class="py-1.5 text-rose-500">Truncar eje Y en barras</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 3: MATRIZ DE DECISIÓN DE GRÁFICOS -->
+      <section class="slide" data-slide="3" data-notes="Mostrar cómo el propósito de comunicación (comparar, tendencia, correlación, distribución) filtra de inmediato el gráfico. Dejar que los alumnos interactúen con los 4 botones.">
+        <div class="max-w-5xl w-full space-y-6">
+          <div class="space-y-1">
+            <h2 class="font-serif text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
+              ¿Qué quieres que el lector entienda?
+            </h2>
+            <p class="text-slate-600 dark:text-slate-300 text-sm sm:text-base">
+              La visualización nunca empieza en el código; empieza en la <strong>pregunta de negocio</strong> que resuelves.
+            </p>
+          </div>
+
+          <!-- Selector interactivo de intenciones -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <button onclick="setChartIntent('comparar')" id="btnIntent-comparar" class="intent-btn p-3 rounded-xl border border-accent bg-accent/10 text-accent font-semibold text-xs sm:text-sm text-left transition-all">
+              <div class="text-base mb-1">📊</div>
+              <div>Comparar Categorías</div>
+            </button>
+            <button onclick="setChartIntent('tendencia')" id="btnIntent-tendencia" class="intent-btn p-3 rounded-xl border border-paper-border dark:border-paper-borderDark bg-paper-raised dark:bg-paper-raisedDark text-slate-600 dark:text-slate-300 text-xs sm:text-sm text-left transition-all">
+              <div class="text-base mb-1">📈</div>
+              <div>Evolución Temporal</div>
+            </button>
+            <button onclick="setChartIntent('relacion')" id="btnIntent-relacion" class="intent-btn p-3 rounded-xl border border-paper-border dark:border-paper-borderDark bg-paper-raised dark:bg-paper-raisedDark text-slate-600 dark:text-slate-300 text-xs sm:text-sm text-left transition-all">
+              <div class="text-base mb-1">🎯</div>
+              <div>Relación entre 2 Métricas</div>
+            </button>
+            <button onclick="setChartIntent('distribucion')" id="btnIntent-distribucion" class="intent-btn p-3 rounded-xl border border-paper-border dark:border-paper-borderDark bg-paper-raised dark:bg-paper-raisedDark text-slate-600 dark:text-slate-300 text-xs sm:text-sm text-left transition-all">
+              <div class="text-base mb-1">🌊</div>
+              <div>Distribución / Dispersión</div>
+            </button>
+          </div>
+
+          <!-- Panel de detalle dinámico -->
+          <div id="intentDisplayBox" class="p-6 rounded-2xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark impeccable-card space-y-4">
+            <!-- Rellenado por JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 4: GRÁFICO DE BARRAS Y LA REGLA SAGRADA DEL EJE Y -->
+      <section class="slide" data-slide="4" data-notes="El caso Couriers de la Clase 10. Si truncas el eje Y de 91 a 96%, Courier D parece 4 veces mejor que Courier A, cuando en realidad la diferencia es de apenas 2.8 puntos porcentuales. En barras, la magnitud se codifica en el área visible.">
+        <div class="max-w-5xl w-full space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2 class="font-serif text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
+                Gráficos de Barras: La Regla Sagrada del Eje Y
+              </h2>
+              <p class="text-slate-600 dark:text-slate-300 text-sm">
+                En barras, el ojo humano evalúa la <strong>longitud del área</strong>, no solo la posición del extremo.
+              </p>
+            </div>
+            <!-- Toggle interactivo -->
+            <div class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-300 dark:border-slate-700">
+              <button id="btnYZero" onclick="toggleYAxis(true)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white shadow-sm transition-all">
+                ✓ Eje Y en Cero (Honesto)
+              </button>
+              <button id="btnYTruncated" onclick="toggleYAxis(false)" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all">
+                ✕ Truncado a 90% (Engañoso)
+              </button>
+            </div>
+          </div>
+
+          <!-- Canvas interactivo de barras -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div class="lg:col-span-2 p-5 rounded-2xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark impeccable-card space-y-3">
+              <div class="flex justify-between items-center text-xs font-mono">
+                <span class="text-slate-400">Entregas a tiempo en octubre: Couriers A, B, C, D</span>
+                <span id="yAxisLabel" class="font-bold text-emerald-500">Escala: 0% a 100%</span>
+              </div>
+              
+              <!-- SVG Bar Simulator -->
+              <div class="h-56 w-full flex items-end justify-around pt-6 pb-2 border-b border-slate-200 dark:border-slate-700 relative">
+                <!-- Grid lines -->
+                <div class="absolute inset-x-0 top-6 border-b border-dashed border-slate-200 dark:border-slate-800"></div>
+                <div class="absolute inset-x-0 top-28 border-b border-dashed border-slate-200 dark:border-slate-800"></div>
+
+                <!-- Bar A: 92.4% -->
+                <div class="flex flex-col items-center w-16 group">
+                  <span id="valA" class="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 mb-1">92.4%</span>
+                  <div id="barA" class="w-full bg-slate-400 dark:bg-slate-500 rounded-t-md transition-all duration-500" style="height: 184px;"></div>
+                  <span class="text-xs font-semibold mt-2 text-slate-600 dark:text-slate-400">Courier A</span>
+                </div>
+
+                <!-- Bar B: 94.1% -->
+                <div class="flex flex-col items-center w-16 group">
+                  <span id="valB" class="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 mb-1">94.1%</span>
+                  <div id="barB" class="w-full bg-slate-400 dark:bg-slate-500 rounded-t-md transition-all duration-500" style="height: 188px;"></div>
+                  <span class="text-xs font-semibold mt-2 text-slate-600 dark:text-slate-400">Courier B</span>
+                </div>
+
+                <!-- Bar C: 93.0% -->
+                <div class="flex flex-col items-center w-16 group">
+                  <span id="valC" class="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 mb-1">93.0%</span>
+                  <div id="barC" class="w-full bg-slate-400 dark:bg-slate-500 rounded-t-md transition-all duration-500" style="height: 186px;"></div>
+                  <span class="text-xs font-semibold mt-2 text-slate-600 dark:text-slate-400">Courier C</span>
+                </div>
+
+                <!-- Bar D: 95.2% -->
+                <div class="flex flex-col items-center w-16 group">
+                  <span id="valD" class="text-xs font-mono font-bold text-accent mb-1">95.2%</span>
+                  <div id="barD" class="w-full bg-accent rounded-t-md transition-all duration-500" style="height: 190px;"></div>
+                  <span class="text-xs font-semibold mt-2 text-slate-600 dark:text-slate-400">Courier D</span>
+                </div>
+              </div>
+
+              <div id="yAxisImpact" class="text-xs text-slate-500 dark:text-slate-400 italic">
+                En escala completa, las 4 empresas operan con rendimiento similar (rango de 2.8%).
+              </div>
+            </div>
+
+            <!-- Explicación de Código -->
+            <div class="p-5 rounded-2xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark impeccable-card space-y-3">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Implementación en Python</h3>
+              <div class="code-block p-3 rounded-lg text-xs font-mono space-y-1">
+                <span class="text-slate-400"># Matplotlib honesto:</span><br>
+                <span class="text-blue-400">fig</span>, <span class="text-blue-400">ax</span> = plt.subplots(figsize=(<span class="text-orange-400">7</span>, <span class="text-orange-400">4</span>))<br>
+                ax.bar(couriers, entregas, color=<span class="text-emerald-400">colores</span>)<br>
+                <span class="text-emerald-400">ax.set_ylim(0, 100)</span> <span class="text-slate-500"># ¡Siempre en 0!</span><br>
+                ax.set_ylabel(<span class="text-yellow-300">"Entregas a tiempo (%)"</span>)
+              </div>
+              <div class="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-900 dark:text-amber-300">
+                <strong>¿Cuándo sí se puede truncar el eje Y?</strong> En gráficos de <strong>líneas de alta precisión</strong> (e.g. monitoreo cardíaco, tasa de cambio diaria de divisas), porque el lector sigue la pendiente y la posición, no la longitud de una masa sólida.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 5: GRÁFICOS DE LÍNEAS Y ACCESIBILIDAD -->
+      <section class="slide" data-slide="5" data-notes="Líneas implican continuidad o tiempo. Nunca conectar categorías no ordenadas con líneas. Además, usar markers y linestyles para que el gráfico sea legible incluso impreso en blanco y negro o por personas con daltonismo.">
+        <div class="max-w-5xl w-full space-y-5">
+          <div class="space-y-1">
+            <h2 class="font-serif text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
+              Gráficos de Líneas: Continuidad &amp; Accesibilidad
+            </h2>
+            <p class="text-slate-600 dark:text-slate-300 text-sm">
+              Las líneas comunican una <strong>trayectoria continua</strong> en el tiempo. Nunca dependas exclusivamente del color.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- Visualizer Multi-serie -->
+            <div class="p-5 rounded-2xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark impeccable-card space-y-4">
+              <div class="flex items-center justify-between text-xs font-mono">
+                <span class="text-slate-400">Ventas Semanales: Canal Web vs App</span>
+                <span class="text-accent font-semibold">12 Semanas</span>
+              </div>
+
+              <!-- SVG Line Graph Simulator -->
+              <svg viewBox="0 0 400 180" class="w-full h-44 bg-slate-50 dark:bg-slate-900/50 rounded-xl p-2 border border-slate-200 dark:border-slate-800">
+                <!-- Grid -->
+                <line x1="40" y1="20" x2="380" y2="20" stroke="#94A3B8" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.3"/>
+                <line x1="40" y1="70" x2="380" y2="70" stroke="#94A3B8" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.3"/>
+                <line x1="40" y1="120" x2="380" y2="120" stroke="#94A3B8" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.3"/>
+                <line x1="40" y1="150" x2="380" y2="150" stroke="#94A3B8" stroke-width="1" opacity="0.5"/>
+
+                <!-- Series Web: Continuous Navy with Circle Markers -->
+                <polyline fill="none" stroke="#0284C7" stroke-width="2.5" points="50,130 90,120 130,100 170,95 210,80 250,70 290,65 330,50 370,40"/>
+                <circle cx="50" cy="130" r="3.5" fill="#0284C7"/>
+                <circle cx="90" cy="120" r="3.5" fill="#0284C7"/>
+                <circle cx="130" cy="100" r="3.5" fill="#0284C7"/>
+                <circle cx="170" cy="95" r="3.5" fill="#0284C7"/>
+                <circle cx="210" cy="80" r="3.5" fill="#0284C7"/>
+                <circle cx="250" cy="70" r="3.5" fill="#0284C7"/>
+                <circle cx="290" cy="65" r="3.5" fill="#0284C7"/>
+                <circle cx="330" cy="50" r="3.5" fill="#0284C7"/>
+                <circle cx="370" cy="40" r="3.5" fill="#0284C7"/>
+
+                <!-- Series App: Dashed Amber with Square Markers -->
+                <polyline fill="none" stroke="#EA580C" stroke-width="2.5" stroke-dasharray="5,4" points="50,145 90,140 130,135 170,120 210,110 250,90 290,75 330,55 370,30"/>
+                <rect x="47" y="142" width="6" height="6" fill="#EA580C"/>
+                <rect x="87" y="137" width="6" height="6" fill="#EA580C"/>
+                <rect x="127" y="132" width="6" height="6" fill="#EA580C"/>
+                <rect x="167" y="117" width="6" height="6" fill="#EA580C"/>
+                <rect x="207" y="107" width="6" height="6" fill="#EA580C"/>
+                <rect x="247" y="87" width="6" height="6" fill="#EA580C"/>
+                <rect x="287" y="72" width="6" height="6" fill="#EA580C"/>
+                <rect x="327" y="52" width="6" height="6" fill="#EA580C"/>
+                <rect x="367" y="27" width="6" height="6" fill="#EA580C"/>
+
+                <!-- Direct annotations -->
+                <text x="375" y="42" fill="#0284C7" font-size="10" font-family="monospace" font-weight="bold">Web</text>
+                <text x="375" y="28" fill="#EA580C" font-size="10" font-family="monospace" font-weight="bold">App</text>
+              </svg>
+
+              <div class="flex items-center justify-between text-xs">
+                <span class="inline-flex items-center space-x-1.5 text-brand">
+                  <span class="w-3 h-0.5 bg-brand"></span>
+                  <span>Web: Línea sólida + Círculos</span>
+                </span>
+                <span class="inline-flex items-center space-x-1.5 text-accent">
+                  <span class="w-3 h-0.5 border-t border-dashed border-accent"></span>
+                  <span>App: Línea punteada + Cuadrados</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Guía de Buenas Prácticas -->
+            <div class="space-y-3">
+              <div class="p-4 rounded-xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark text-xs space-y-2">
+                <div class="font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+                  <span class="text-emerald-500 text-sm">✓</span>
+                  <span>Direct Labeling en vez de Leyenda Lejana</span>
+                </div>
+                <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Colocar el nombre de la serie al final de la línea (<code class="font-mono">ax.annotate</code> o texto directo) reduce la carga visual de mirar hacia una caja de leyenda en la esquina superior.
+                </p>
+              </div>
+
+              <div class="p-4 rounded-xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark text-xs space-y-2">
+                <div class="font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+                  <span class="text-rose-500 text-sm">✕</span>
+                  <span>Error Prohibido: Conectar Categorías con Líneas</span>
+                </div>
+                <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Si el eje X tiene "Las Condes", "Providencia", "Santiago", <strong>jamás uses una línea</strong>. La pendiente inventa una interpolación matemática falsa entre comunas independientes.
+                </p>
+              </div>
+
+              <div class="code-block p-3 rounded-lg text-xs font-mono">
+                <span class="text-slate-400"># Matplotlib accesible</span><br>
+                ax.plot(sem, web, color=<span class="text-cyan-400">"navy"</span>, marker=<span class="text-yellow-300">"o"</span>, label=<span class="text-yellow-300">"Web"</span>)<br>
+                ax.plot(sem, app, color=<span class="text-orange-400">"darkorange"</span>, marker=<span class="text-yellow-300">"s"</span>, linestyle=<span class="text-yellow-300">"--"</span>)
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 6: LÍMITES (set_ylim) VS ESCALAS (set_yscale('log')) -->
+      <section class="slide" data-slide="6" data-notes="Caso 4 de Clase 10: Usuarios activos de una app en su primer año (de 100 a 100,000). En escala lineal los primeros meses parecen planos. En logarítmica vemos que creció a un ritmo constante del 100% mensual.">
+        <div class="max-w-5xl w-full space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2 class="font-serif text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
+                Intervalo (<code class="font-mono text-xl text-accent">set_ylim</code>) vs. Escala (<code class="font-mono text-xl text-accent">set_yscale</code>)
+              </h2>
+              <p class="text-slate-600 dark:text-slate-300 text-sm">
+                Fijar límites visibles cambia la ventana; cambiar la escala cambia la métrica de cambio.
+              </p>
+            </div>
+            <!-- Toggle Escala -->
+            <div class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-300 dark:border-slate-700">
+              <button id="btnScaleLinear" onclick="toggleScale(false)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand text-white shadow-sm transition-all">
+                Escala Lineal
+              </button>
+              <button id="btnScaleLog" onclick="toggleScale(true)" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all">
+                Escala Logarítmica (log)
+              </button>
+            </div>
+          </div>
+
+          <!-- Interactivo de escala -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div class="lg:col-span-2 p-5 rounded-2xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark impeccable-card space-y-3">
+              <div class="flex justify-between items-center text-xs font-mono">
+                <span class="text-slate-400">Caso: Crecimiento de Usuarios en Año 1 (100 → 100.000)</span>
+                <span id="scaleCurrentMode" class="font-bold text-brand">Modo: Lineal (set_yscale('linear'))</span>
+              </div>
+
+              <!-- SVG Escala Dinámica -->
+              <div class="h-52 w-full relative bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3 border border-slate-200 dark:border-slate-800">
+                <svg id="scaleSvg" viewBox="0 0 450 180" class="w-full h-full">
+                  <!-- Axis Lines -->
+                  <line x1="50" y1="20" x2="50" y2="150" stroke="#94A3B8" stroke-width="1"/>
+                  <line x1="50" y1="150" x2="430" y2="150" stroke="#94A3B8" stroke-width="1"/>
+
+                  <!-- Dynamic Y Labels -->
+                  <text id="yLabelTop" x="10" y="25" fill="#94A3B8" font-size="10" font-family="monospace">100k</text>
+                  <text id="yLabelMid" x="10" y="85" fill="#94A3B8" font-size="10" font-family="monospace">50k</text>
+                  <text id="yLabelBot" x="10" y="150" fill="#94A3B8" font-size="10" font-family="monospace">0</text>
+
+                  <!-- Curve path (dynamic) -->
+                  <path id="scaleCurve" d="M 60 148 Q 280 145 420 25" fill="none" stroke="#0284C7" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+              </div>
+
+              <div id="scaleInsight" class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                En escala lineal, los primeros 7 meses parecen "muertos" porque 1.000 usuarios es invisible al lado de 100.000.
+              </div>
+            </div>
+
+            <!-- Recomendación de Negocio -->
+            <div class="p-5 rounded-2xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark impeccable-card space-y-4">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Criterio de Decisión</h3>
+              <div class="space-y-3 text-xs">
+                <div class="p-3 rounded-lg bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+                  <div class="font-bold text-brand">Usa Lineal cuando:</div>
+                  <div class="text-slate-600 dark:text-slate-400 mt-1">El lector necesita comparar <strong>magnitudes absolutas</strong> directas (ej. cuántos millones de pesos ingresaron en caja).</div>
+                </div>
+                <div class="p-3 rounded-lg bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+                  <div class="font-bold text-accent">Usa Logarítmica cuando:</div>
+                  <div class="text-slate-600 dark:text-slate-400 mt-1">Hay varios <strong>órdenes de magnitud</strong> de diferencia o quieres mostrar si la <strong>tasa de crecimiento porcentual</strong> se mantiene.</div>
+                </div>
+              </div>
+              <div class="code-block p-2.5 rounded-lg text-xs font-mono">
+                ax.set_yscale(<span class="text-yellow-300">"log"</span>)
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 7: DISPERSIÓN (SCATTER) Y OVERPLOTTING -->
+      <section class="slide" data-slide="7" data-notes="Caso 6 de Clase 10: 30 campañas pero solo se ven 15 puntos por sobreposición. Explicar el parámetro alpha para ver densidad de puntos y ax.grid para leer coordenadas sin esfuerzo.">
+        <div class="max-w-5xl w-full space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2 class="font-serif text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
+                Dispersión (<code class="font-mono text-xl text-accent">ax.scatter</code>) &amp; Overplotting
+              </h2>
+              <p class="text-slate-600 dark:text-slate-300 text-sm">
+                Dos variables numéricas continuas. ¿Qué pasa cuando múltiples observaciones caen en las mismas coordenadas?
+              </p>
+            </div>
+            <!-- Toggle Alpha -->
+            <div class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-300 dark:border-slate-700">
+              <button id="btnAlphaSolid" onclick="toggleScatterAlpha(false)" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all">
+                ✕ Sin Alpha (Puntos Opacos)
+              </button>
+              <button id="btnAlphaTrans" onclick="toggleScatterAlpha(true)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand text-white shadow-sm transition-all">
+                ✓ Con Alpha=0.35 (Densidad Visible)
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <!-- Scatter Simulator -->
+            <div class="lg:col-span-2 p-5 rounded-2xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark impeccable-card space-y-3">
+              <div class="flex justify-between items-center text-xs font-mono">
+                <span class="text-slate-400">Inversión en Marketing ($M) vs. Ventas Generadas ($M)</span>
+                <span id="scatterStatus" class="font-bold text-emerald-500">Transparencia activa</span>
+              </div>
+
+              <div class="h-52 w-full relative bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3 border border-slate-200 dark:border-slate-800">
+                <svg viewBox="0 0 450 180" class="w-full h-full">
+                  <!-- Subtle Grid -->
+                  <line x1="50" y1="30" x2="430" y2="30" stroke="#94A3B8" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.3"/>
+                  <line x1="50" y1="80" x2="430" y2="80" stroke="#94A3B8" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.3"/>
+                  <line x1="50" y1="130" x2="430" y2="130" stroke="#94A3B8" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.3"/>
+
+                  <!-- Clustered Points -->
+                  <!-- Cluster 1: Inversion 1M -->
+                  <g id="scatterPoints" class="transition-opacity duration-300">
+                    <!-- Overlapping at (100, 130) x6 -->
+                    <circle cx="100" cy="130" r="7" fill="#0284C7" class="scatter-dot"/>
+                    <circle cx="101" cy="130" r="7" fill="#0284C7" class="scatter-dot"/>
+                    <circle cx="100" cy="131" r="7" fill="#0284C7" class="scatter-dot"/>
+                    <circle cx="100" cy="129" r="7" fill="#0284C7" class="scatter-dot"/>
+                    <circle cx="102" cy="130" r="7" fill="#0284C7" class="scatter-dot"/>
+
+                    <!-- Overlapping at (180, 95) x8 -->
+                    <circle cx="180" cy="95" r="7" fill="#0284C7" class="scatter-dot"/>
+                    <circle cx="181" cy="96" r="7" fill="#0284C7" class="scatter-dot"/>
+                    <circle cx="179" cy="95" r="7" fill="#0284C7" class="scatter-dot"/>
+                    <circle cx="180" cy="94" r="7" fill="#0284C7" class="scatter-dot"/>
+                    <circle cx="182" cy="95" r="7" fill="#0284C7" class="scatter-dot"/>
+                    <circle cx="180" cy="96" r="7" fill="#0284C7" class="scatter-dot"/>
+
+                    <!-- Individual Points -->
+                    <circle cx="260" cy="70" r="7" fill="#0284C7" class="scatter-dot"/>
+                    <circle cx="320" cy="45" r="7" fill="#0284C7" class="scatter-dot"/>
+                    <circle cx="390" cy="35" r="7" fill="#0284C7" class="scatter-dot"/>
+                  </g>
+                </svg>
+              </div>
+
+              <div id="scatterInsight" class="text-xs text-slate-500 dark:text-slate-400">
+                Al activar <code class="font-mono text-accent">alpha=0.35</code>, las zonas con múltiples observaciones superpuestas se vuelven más oscuras, revelando la concentración de datos oculta.
+              </div>
+            </div>
+
+            <!-- Código y Regla -->
+            <div class="p-5 rounded-2xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark impeccable-card space-y-4">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Fórmula en Matplotlib</h3>
+              <div class="code-block p-3 rounded-lg text-xs font-mono space-y-1">
+                ax.scatter(inversion, ventas,<br>
+                &nbsp;&nbsp;<span class="text-emerald-400">alpha=0.35</span>,<br>
+                &nbsp;&nbsp;<span class="text-cyan-400">color="navy"</span>,<br>
+                &nbsp;&nbsp;<span class="text-orange-400">s=50</span>)<br>
+                <span class="text-slate-400"># Grilla sutil que no ensucia:</span><br>
+                ax.grid(<span class="text-yellow-300">True</span>, alpha=<span class="text-orange-400">0.3</span>, linestyle=<span class="text-yellow-300">":"</span>)
+              </div>
+              <div class="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40 text-xs text-blue-900 dark:text-blue-300">
+                <strong>¿Cuándo usar Scatter?</strong> Cuando ambas variables son métricas numéricas y sospechas una correlación lineal, cuadrática o agrupamientos (clusters).
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 8: STORYTELLING Y COLOR DE ACENTO -->
+      <section class="slide" data-slide="8" data-notes="Caso 5 de Clase 10: ¿Qué aportan cinco colores distintos? Nada, saturan la atención. Un color de acento sobre fondo gris destaca de inmediato la anomalía o la conclusión de negocio.">
+        <div class="max-w-5xl w-full space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2 class="font-serif text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
+                Storytelling: Color de Acento vs. Arcoíris
+              </h2>
+              <p class="text-slate-600 dark:text-slate-300 text-sm">
+                El color no es decoración; es un <strong>puntero de atención cognitiva</strong> hacia el dato clave.
+              </p>
+            </div>
+            <!-- Toggle Color Mode -->
+            <div class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-300 dark:border-slate-700">
+              <button id="btnColorRainbow" onclick="toggleAccentColor(false)" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all">
+                ✕ Modo Arcoíris (Sin Foco)
+              </button>
+              <button id="btnColorAccent" onclick="toggleAccentColor(true)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent text-white shadow-sm transition-all">
+                ✓ Color de Acento (Storytelling)
+              </button>
+            </div>
+          </div>
+
+          <!-- Color Demo Container -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div class="lg:col-span-2 p-5 rounded-2xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark impeccable-card space-y-3">
+              <div class="flex justify-between items-center text-xs font-mono">
+                <span id="colorChartTitle" class="font-bold text-slate-900 dark:text-white">Línea 3 concentró el 42% de los defectos del turno</span>
+                <span class="text-slate-400">Auditoría Fábrica</span>
+              </div>
+
+              <!-- SVG Bars for Accent vs Rainbow -->
+              <div class="h-52 w-full flex items-end justify-around pt-6 pb-2 border-b border-slate-200 dark:border-slate-700 relative">
+                <!-- Line 1 -->
+                <div class="flex flex-col items-center w-14">
+                  <span class="text-xs font-mono text-slate-500 mb-1">12</span>
+                  <div id="cBar1" class="w-full bg-slate-400 rounded-t-md transition-colors duration-300" style="height: 60px;"></div>
+                  <span class="text-xs font-mono mt-2 text-slate-500">Línea 1</span>
+                </div>
+                <!-- Line 2 -->
+                <div class="flex flex-col items-center w-14">
+                  <span class="text-xs font-mono text-slate-500 mb-1">18</span>
+                  <div id="cBar2" class="w-full bg-slate-400 rounded-t-md transition-colors duration-300" style="height: 85px;"></div>
+                  <span class="text-xs font-mono mt-2 text-slate-500">Línea 2</span>
+                </div>
+                <!-- Line 3 (Accent) -->
+                <div class="flex flex-col items-center w-14">
+                  <span class="text-xs font-mono font-bold text-accent mb-1">45</span>
+                  <div id="cBar3" class="w-full bg-accent rounded-t-md transition-colors duration-300" style="height: 180px;"></div>
+                  <span class="text-xs font-mono font-bold mt-2 text-accent">Línea 3</span>
+                </div>
+                <!-- Line 4 -->
+                <div class="flex flex-col items-center w-14">
+                  <span class="text-xs font-mono text-slate-500 mb-1">15</span>
+                  <div id="cBar4" class="w-full bg-slate-400 rounded-t-md transition-colors duration-300" style="height: 75px;"></div>
+                  <span class="text-xs font-mono mt-2 text-slate-500">Línea 4</span>
+                </div>
+                <!-- Line 5 -->
+                <div class="flex flex-col items-center w-14">
+                  <span class="text-xs font-mono text-slate-500 mb-1">10</span>
+                  <div id="cBar5" class="w-full bg-slate-400 rounded-t-md transition-colors duration-300" style="height: 50px;"></div>
+                  <span class="text-xs font-mono mt-2 text-slate-500">Línea 5</span>
+                </div>
+              </div>
+
+              <div id="colorExplain" class="text-xs text-slate-500 dark:text-slate-400">
+                Al usar gris para el contexto y un acento cálido para la categoría crítica, la audiencia lee la conclusión en <strong>menos de 2 segundos</strong>.
+              </div>
+            </div>
+
+            <!-- Títulos Declarativos -->
+            <div class="p-5 rounded-2xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark impeccable-card space-y-3">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Títulos Declarativos</h3>
+              <p class="text-xs text-slate-600 dark:text-slate-400">
+                Un título pasivo como <em>"Defectos por línea de producción"</em> no dice nada. Un título activo guía la interpretación:
+              </p>
+              <div class="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 text-xs text-rose-800 dark:text-rose-300 space-y-1">
+                <div class="font-mono font-bold">✕ Título Pasivo:</div>
+                <div>"Gráfico 1: Ventas por Canal en 2024"</div>
+              </div>
+              <div class="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
+                <div class="font-mono font-bold">✓ Título Declarativo:</div>
+                <div>"El canal Web creció un 40% y superó a las tiendas físicas en el Q4"</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 9: ANATOMÍA DE MATPLOTLIB (FIGURE VS AXES) -->
+      <section class="slide" data-slide="9" data-notes="Recordar la diferencia técnica: Figure es el lienzo contenedor completo; Axes es cada gráfico individual. No confundir Axes con Axis (ejes X o Y).">
+        <div class="max-w-5xl w-full space-y-5">
+          <div class="space-y-1">
+            <h2 class="font-serif text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
+              Anatomía de Matplotlib: <code class="font-mono text-accent">Figure</code> vs. <code class="font-mono text-accent">Axes</code>
+            </h2>
+            <p class="text-slate-600 dark:text-slate-300 text-sm">
+              <code class="font-mono text-xs font-semibold">Axes</code> no significa «ejes [axis]». Un Axes es una superficie completa de dibujo.
+            </p>
+          </div>
+
+          <!-- Visual Diagram of Matplotlib Structure -->
+          <div class="p-6 rounded-2xl bg-paper-raised dark:bg-paper-raisedDark border-2 border-dashed border-paper-border dark:border-paper-borderDark relative space-y-4 impeccable-card">
+            <div class="flex items-center justify-between text-xs font-mono font-bold text-slate-400">
+              <span>Figure (Lienzo global: fig = plt.subplots(figsize=(ancho, alto)))</span>
+              <span class="text-accent">fig</span>
+            </div>
+
+            <div class="p-5 rounded-xl bg-slate-100 dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 space-y-4">
+              <div class="flex justify-between items-center text-xs font-mono">
+                <span class="font-bold text-brand">Axes (ax): área individual donde se traza la data</span>
+                <span class="text-xs bg-brand/10 text-brand px-2 py-0.5 rounded">ax.set_title(...)</span>
+              </div>
+
+              <!-- Mock chart inside -->
+              <div class="h-28 flex items-center justify-center border-l-2 border-b-2 border-slate-400 dark:border-slate-500 relative">
+                <span class="absolute -left-6 top-1/2 -rotate-90 text-[10px] font-mono text-slate-500">ax.set_ylabel()</span>
+                <span class="absolute -bottom-5 text-[10px] font-mono text-slate-500">ax.set_xlabel() / ax.tick_params(labelrotation=30)</span>
+                <span class="text-xs font-mono text-slate-400">ax.bar() · ax.plot() · ax.scatter()</span>
+              </div>
+            </div>
+
+            <!-- Table of anatomy methods -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 text-xs font-mono">
+              <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                <span class="text-accent font-bold">ax.tick_params()</span>
+                <p class="text-slate-500 text-[11px] font-sans mt-0.5">Rotar etiquetas largas con <code class="font-mono">labelrotation=30</code>.</p>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                <span class="text-brand font-bold">ax.spines['top'].set_visible(False)</span>
+                <p class="text-slate-500 text-[11px] font-sans mt-0.5">Quitar bordes innecesarios para aumentar data-ink ratio.</p>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                <span class="text-emerald-500 font-bold">plt.tight_layout()</span>
+                <p class="text-slate-500 text-[11px] font-sans mt-0.5">Ajusta márgenes para que no se corten los textos al guardar.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 10: CHEATSHEET RÁPIDO PRE-JUEGO -->
+      <section class="slide" data-slide="10" data-notes="Este es el resumen definitivo que usarán en la competencia: cuántas variables tienen, de qué tipo, y cuál es el gráfico ganador.">
+        <div class="max-w-5xl w-full space-y-5">
+          <div class="space-y-1">
+            <h2 class="font-serif text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
+              Árbol de Decisión Rápido Pre-Juego
+            </h2>
+            <p class="text-slate-600 dark:text-slate-300 text-sm">
+              Memoriza este mapa mental antes de que empiece el temporizador en la arena.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <!-- Card 1 -->
+            <div class="p-4 rounded-xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark impeccable-card space-y-2">
+              <span class="px-2 py-0.5 rounded bg-brand/10 text-brand font-mono font-bold">1 Numérica</span>
+              <h3 class="font-bold text-slate-900 dark:text-white text-sm">Histograma / KDE</h3>
+              <p class="text-slate-600 dark:text-slate-400">Para ver la forma de la distribución, simetría y valores atípicos (outliers).</p>
+              <div class="text-[11px] text-accent font-semibold pt-1">Código: ax.hist(df['x'], bins=20)</div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="p-4 rounded-xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark impeccable-card space-y-2">
+              <span class="px-2 py-0.5 rounded bg-accent/10 text-accent font-mono font-bold">1 Cat + 1 Num</span>
+              <h3 class="font-bold text-slate-900 dark:text-white text-sm">Barras (Y en Cero)</h3>
+              <p class="text-slate-600 dark:text-slate-400">Comparar magnitudes discretas. Si hay más de 8 categorías, usa barras horizontales.</p>
+              <div class="text-[11px] text-accent font-semibold pt-1">Código: ax.bar(x, y) o ax.barh()</div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="p-4 rounded-xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark impeccable-card space-y-2">
+              <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono font-bold">Tiempo + 1..N Num</span>
+              <h3 class="font-bold text-slate-900 dark:text-white text-sm">Gráfico de Líneas</h3>
+              <p class="text-slate-600 dark:text-slate-400">Tendencias y estacionalidad. Diferencia series con markers y linestyles.</p>
+              <div class="text-[11px] text-accent font-semibold pt-1">Código: ax.plot(t, y, marker='o')</div>
+            </div>
+
+            <!-- Card 4 -->
+            <div class="p-4 rounded-xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark impeccable-card space-y-2">
+              <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 font-mono font-bold">2 Numéricas</span>
+              <h3 class="font-bold text-slate-900 dark:text-white text-sm">Dispersión (Scatter)</h3>
+              <p class="text-slate-600 dark:text-slate-400">Para verificar correlación e identificar clusters. Siempre prueba con alpha.</p>
+              <div class="text-[11px] text-accent font-semibold pt-1">Código: ax.scatter(x, y, alpha=0.3)</div>
+            </div>
+          </div>
+
+          <!-- Reglas de Oro Card -->
+          <div class="p-4 rounded-xl bg-slate-900 text-slate-200 border border-slate-800 text-xs space-y-2">
+            <div class="font-mono font-bold text-accent uppercase tracking-wider">3 Reglas de Oro Para la Evaluación:</div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div><strong>1. Honestidad:</strong> Nunca trunques el eje Y en barras. Si debes hacer zoom, justifica por qué o usa un gráfico de líneas.</div>
+              <div><strong>2. Intención:</strong> Usa color solo para lo que debe destacar. Si todo brilla, nada llama la atención.</div>
+              <div><strong>3. Autosuficiencia:</strong> El título debe ser la conclusión. Quien lea el gráfico debe entenderlo sin que tengas que explicarlo.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 11: LLAMADA A LA ACCIÓN / ENTRADA A LA ARENA -->
+      <section class="slide" data-slide="11" data-notes="¡Momento de jugar! Abrir el juego en la pestaña contigua y que los estudiantes participen.">
+        <div class="max-w-3xl w-full text-center space-y-6 my-auto">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-accent text-white flex items-center justify-center font-mono text-2xl font-bold shadow-lg shadow-accent/25">
+            ⚔️
+          </div>
+
+          <h2 class="font-serif text-4xl sm:text-5xl font-bold text-slate-900 dark:text-white text-balance">
+            ¡Listos para la DataViz Arena!
+          </h2>
+
+          <p class="text-slate-600 dark:text-slate-300 text-base sm:text-lg leading-relaxed text-balance">
+            Ahora que dominan los tipos semánticos, las reglas del eje Y y el uso intencional del color, pondremos a prueba su intuición con escenarios empresariales reales al azar.
+          </p>
+
+          <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a href="https://nicogouet5.github.io/Data-Kahoo/" target="_blank" class="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-accent hover:bg-accent-hover text-white font-semibold text-sm transition-all shadow-md flex items-center justify-center space-x-2">
+              <span>Jugar en GitHub Pages</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            </a>
+
+            <button onclick="goToSlide(1)" class="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark text-slate-700 dark:text-slate-200 font-semibold text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+              ↺ Reiniciar Presentación
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- BOTTOM FLOATING CONTROLS -->
+  <footer class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-paper-raised/90 dark:bg-paper-raisedDark/90 backdrop-blur-md border border-paper-border dark:border-paper-borderDark px-4 py-2 rounded-full shadow-lg flex items-center space-x-4 text-xs font-mono transition-colors">
+    <button id="prevBtn" onclick="prevSlide()" class="p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-colors" title="Diapositiva anterior (←)">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+    </button>
+
+    <div class="flex items-center space-x-1" id="dotsContainer">
+      <!-- Dots generated dynamically by JS -->
+    </div>
+
+    <button id="nextBtn" onclick="nextSlide()" class="p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-colors" title="Siguiente diapositiva (→ o Espacio)">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+    </button>
+  </footer>
+
+  <!-- SPEAKER NOTES DRAWER (PRESS 'N') -->
+  <div id="notesDrawer" class="fixed right-4 bottom-20 z-50 w-80 max-w-[calc(100vw-2rem)] p-4 rounded-xl bg-slate-900/95 text-slate-200 border border-slate-700 backdrop-blur-md shadow-2xl transition-all duration-300 transform translate-y-4 opacity-0 pointer-events-none">
+    <div class="flex items-center justify-between pb-2 border-b border-slate-700 mb-2">
+      <span class="text-xs font-mono font-bold text-accent uppercase tracking-wider">Notas de Cátedra (Ayudante)</span>
+      <button onclick="toggleNotes()" class="text-slate-400 hover:text-white text-xs">✕</button>
+    </div>
+    <div id="notesContent" class="text-xs text-slate-300 leading-relaxed font-sans">
+      Bienvenido.
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // State
+    let currentSlide = 1;
+    const totalSlides = 11;
+    const slideTrack = document.getElementById('slideTrack');
+    const currentSlideNum = document.getElementById('currentSlideNum');
+    const totalSlidesNum = document.getElementById('totalSlidesNum');
+    const progressBar = document.getElementById('progressBar');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const dotsContainer = document.getElementById('dotsContainer');
+    const notesDrawer = document.getElementById('notesDrawer');
+    const notesContent = document.getElementById('notesContent');
+
+    // Create Navigation Dots
+    for (let i = 1; i <= totalSlides; i++) {
+      const dot = document.createElement('button');
+      dot.className = `w-2 h-2 rounded-full transition-all ${i === 1 ? 'bg-accent w-4' : 'bg-slate-300 dark:bg-slate-600'}`;
+      dot.title = `Ir a slide ${i}`;
+      dot.onclick = () => goToSlide(i);
+      dotsContainer.appendChild(dot);
+    }
+
+    function updateSlide() {
+      // Move track
+      slideTrack.style.transform = `translateX(-${(currentSlide - 1) * 100}vw)`;
+      
+      // Update numbers
+      currentSlideNum.textContent = currentSlide.toString().padStart(2, '0');
+      totalSlidesNum.textContent = totalSlides.toString().padStart(2, '0');
+      
+      // Update progress bar
+      const progressPercent = (currentSlide / totalSlides) * 100;
+      progressBar.style.width = `${progressPercent}%`;
+
+      // Update buttons
+      prevBtn.disabled = currentSlide === 1;
+      nextBtn.disabled = currentSlide === totalSlides;
+
+      // Update dots
+      const dots = dotsContainer.children;
+      for (let i = 0; i < dots.length; i++) {
+        if (i + 1 === currentSlide) {
+          dots[i].className = 'w-4 h-2 rounded-full bg-accent transition-all';
+        } else {
+          dots[i].className = 'w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 transition-all';
+        }
+      }
+
+      // Update Speaker Notes
+      const activeSlideEl = document.querySelector(`.slide[data-slide="${currentSlide}"]`);
+      if (activeSlideEl && activeSlideEl.dataset.notes) {
+        notesContent.textContent = activeSlideEl.dataset.notes;
+      } else {
+        notesContent.textContent = "Sin notas para esta diapositiva.";
+      }
+    }
+
+    function goToSlide(n) {
+      if (n >= 1 && n <= totalSlides) {
+        currentSlide = n;
+        updateSlide();
+      }
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        currentSlide++;
+        updateSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        updateSlide();
+      }
+    }
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp' || e.key === 'Backspace') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key.toLowerCase() === 'n') {
+        toggleNotes();
+      } else if (e.key.toLowerCase() === 't') {
+        toggleTheme();
+      } else if (e.key.toLowerCase() === 'f') {
+        toggleFullscreen();
+      }
+    });
+
+    // Toggle Speaker Notes
+    function toggleNotes() {
+      const isOpen = !notesDrawer.classList.contains('opacity-0');
+      if (isOpen) {
+        notesDrawer.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+      } else {
+        notesDrawer.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+      }
+    }
+    document.getElementById('toggleNotesBtn').onclick = toggleNotes;
+
+    // Theme Toggle
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }
+    document.getElementById('toggleThemeBtn').onclick = toggleTheme;
+
+    // Check saved theme or system preference
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    // Fullscreen Toggle
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+    document.getElementById('toggleFullscreenBtn').onclick = toggleFullscreen;
+
+    // --- INTERACTIVE SLIDE DEMOS ---
+
+    // 1. Matriz de Intenciones (Slide 3)
+    const intentData = {
+      comparar: {
+        title: "Comparar Categorías Discretas",
+        bestChart: "Gráfico de Barras (Columnas o Barras Horizontales)",
+        forbiddenChart: "Gráfico de Pastel (Pie Chart) con >3 rebanadas",
+        whyBest: "El ojo humano compara longitudes en un eje común con precisión milimétrica.",
+        whyForbidden: "Los ángulos y áreas circulares engañan la percepción humana; es imposible saber si una rebanada de 22% es mayor que una de 19% sin leer la etiqueta.",
+        rule: "Si los nombres de categorías son largos (ej. 'Comuna de Pedro Aguirre Cerda'), usa barras horizontales (ax.barh) para que el texto no se superponga.",
+        code: "ax.bar(categorias, valores, color='#EA580C')\n# o barras horizontales:\nax.barh(categorias, valores)"
+      },
+      tendencia: {
+        title: "Evolución Temporal & Tendencias",
+        bestChart: "Gráfico de Líneas (Line Plot)",
+        forbiddenChart: "Barras con categorías desordenadas o líneas entre comunas",
+        whyBest: "La línea genera una ilusión de continuidad que refleja el paso real del tiempo.",
+        whyForbidden: "Conectar puntos que no tienen orden temporal inventa pendientes matemáticas que no existen en la realidad.",
+        rule: "En multi-serie, asigna marcadores (o, s, ^) y estilos de línea (-, --) para ser accesible a daltónicos.",
+        code: "ax.plot(fechas, ventas, marker='o', linestyle='-', color='navy')"
+      },
+      relacion: {
+        title: "Relación entre Dos Variables Numéricas",
+        bestChart: "Gráfico de Dispersión (Scatter Plot)",
+        forbiddenChart: "Gráficos de Líneas que zigzaguean hacia atrás",
+        whyBest: "Muestra si a medida que crece X, Y sube (correlación positiva), baja (negativa) o se dispersa al azar.",
+        whyForbidden: "Unir puntos de dos métricas independientes con una línea produce una maraña incomprensible.",
+        rule: "Siempre configura alpha < 0.5 cuando tengas más de 30 observaciones para diagnosticar sobreposición (overplotting).",
+        code: "ax.scatter(inversion, ventas, alpha=0.35, color='#0284C7')"
+      },
+      distribucion: {
+        title: "Distribución de una Variable Cuantitativa",
+        bestChart: "Histograma / Diagrama de Caja (Boxplot)",
+        forbiddenChart: "Promedio simple sin desviación estándar",
+        whyBest: "Revela la asimetría (sesgo a la derecha o izquierda), bimodalidad y valores atípicos extremos.",
+        whyForbidden: "Un solo número (ej. 'el sueldo promedio es 1.5M') oculta que el 80% gana menos de 800k.",
+        rule: "Ajusta el número de bins (intervalos) conscientemente; muy pocos bins ocultan la forma y demasiados crean ruido.",
+        code: "ax.hist(edades, bins=20, edgecolor='black', color='#10B981')"
+      }
+    };
+
+    function setChartIntent(intentKey) {
+      document.querySelectorAll('.intent-btn').forEach(btn => {
+        btn.classList.remove('border-accent', 'bg-accent/10', 'text-accent');
+        btn.classList.add('border-paper-border', 'dark:border-paper-borderDark', 'bg-paper-raised', 'dark:bg-paper-raisedDark', 'text-slate-600', 'dark:text-slate-300');
+      });
+      const activeBtn = document.getElementById(`btnIntent-${intentKey}`);
+      if (activeBtn) {
+        activeBtn.classList.add('border-accent', 'bg-accent/10', 'text-accent');
+        activeBtn.classList.remove('border-paper-border', 'dark:border-paper-borderDark', 'bg-paper-raised', 'dark:bg-paper-raisedDark', 'text-slate-600', 'dark:text-slate-300');
+      }
+
+      const item = intentData[intentKey];
+      const box = document.getElementById('intentDisplayBox');
+      box.innerHTML = `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-paper-border dark:border-paper-borderDark">
+          <h3 class="text-base font-bold text-slate-900 dark:text-white font-serif">${item.title}</h3>
+          <span class="text-xs font-mono px-2.5 py-1 rounded bg-accent-soft dark:bg-accent-softDark text-accent font-semibold">Gráfico Ideal: ${item.bestChart}</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div class="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 space-y-1.5">
+            <div class="font-bold text-emerald-800 dark:text-emerald-300 flex items-center space-x-1.5">
+              <span>✓</span>
+              <span>¿Por qué funciona?</span>
+            </div>
+            <p class="text-emerald-900 dark:text-emerald-200/90 leading-relaxed">${item.whyBest}</p>
+            <div class="pt-1 text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">${item.rule}</div>
+          </div>
+          <div class="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 space-y-1.5">
+            <div class="font-bold text-rose-800 dark:text-rose-300 flex items-center space-x-1.5">
+              <span>✕</span>
+              <span>Peligro / Anti-Patrón:</span>
+            </div>
+            <div class="font-semibold text-rose-900 dark:text-rose-200">${item.forbiddenChart}</div>
+            <p class="text-rose-900 dark:text-rose-200/90 leading-relaxed">${item.whyForbidden}</p>
+          </div>
+        </div>
+        <div class="code-block p-3 rounded-lg text-xs font-mono">
+          <span class="text-slate-400"># Matplotlib syntax</span><br>
+          ${item.code.replace(/\n/g, '<br>')}
+        </div>
+      `;
+    }
+
+    // Inicializar primer intent
+    setChartIntent('comparar');
+
+    // 2. Bar Y-Axis Zero Toggle (Slide 4)
+    function toggleYAxis(isZero) {
+      const barA = document.getElementById('barA');
+      const barB = document.getElementById('barB');
+      const barC = document.getElementById('barC');
+      const barD = document.getElementById('barD');
+      const yAxisLabel = document.getElementById('yAxisLabel');
+      const yAxisImpact = document.getElementById('yAxisImpact');
+      const btnYZero = document.getElementById('btnYZero');
+      const btnYTruncated = document.getElementById('btnYTruncated');
+
+      if (isZero) {
+        // Honesto: 0 a 100% -> alturas proporcionales de 184px a 190px (diferencia sutil real)
+        barA.style.height = '184px';
+        barB.style.height = '188px';
+        barC.style.height = '186px';
+        barD.style.height = '190px';
+        yAxisLabel.textContent = 'Escala: 0% a 100%';
+        yAxisLabel.className = 'font-bold text-emerald-500';
+        yAxisImpact.innerHTML = 'En escala completa (eje en cero), las 4 empresas operan con rendimiento similar (rango de 2.8 puntos).';
+        btnYZero.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white shadow-sm transition-all';
+        btnYTruncated.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all';
+      } else {
+        // Truncado: 91% a 96% -> distorsión donde Courier D parece 4x más alto que Courier A
+        barA.style.height = '40px';
+        barB.style.height = '120px';
+        barC.style.height = '70px';
+        barD.style.height = '180px';
+        yAxisLabel.textContent = 'Escala: 91% a 96% (¡TRUNCADO!)';
+        yAxisLabel.className = 'font-bold text-rose-500 animate-pulse';
+        yAxisImpact.innerHTML = '<strong class="text-rose-500">¡Alerta de Manipulación Visual!</strong> Truncar a 91% hace parecer que Courier D cuadruplica a Courier A cuando solo difieren en 2.8%.';
+        btnYTruncated.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 text-white shadow-sm transition-all';
+        btnYZero.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all';
+      }
+    }
+
+    // 3. Scale Log vs Linear Toggle (Slide 6)
+    function toggleScale(isLog) {
+      const modeText = document.getElementById('scaleCurrentMode');
+      const yTop = document.getElementById('yLabelTop');
+      const yMid = document.getElementById('yLabelMid');
+      const yBot = document.getElementById('yLabelBot');
+      const curve = document.getElementById('scaleCurve');
+      const insight = document.getElementById('scaleInsight');
+      const btnLinear = document.getElementById('btnScaleLinear');
+      const btnLog = document.getElementById('btnScaleLog');
+
+      if (isLog) {
+        modeText.textContent = "Modo: Logarítmico (ax.set_yscale('log'))";
+        modeText.className = "font-bold text-accent";
+        yTop.textContent = "100k (10^5)";
+        yMid.textContent = "1k (10^3)";
+        yBot.textContent = "10 (10^1)";
+        // In log scale, exponential growth with constant rate is a STRAIGHT line
+        curve.setAttribute('d', 'M 60 145 L 420 30');
+        curve.setAttribute('stroke', '#EA580C');
+        insight.innerHTML = '<strong class="text-accent">La escala logarítmica convierte el crecimiento exponencial en una línea recta.</strong> Permite comprobar al instante si el producto mantiene una tasa de aceleración porcentual constante.';
+        btnLog.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent text-white shadow-sm transition-all';
+        btnLinear.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all';
+      } else {
+        modeText.textContent = "Modo: Lineal (ax.set_yscale('linear'))";
+        modeText.className = "font-bold text-brand";
+        yTop.textContent = "100k";
+        yMid.textContent = "50k";
+        yBot.textContent = "0";
+        curve.setAttribute('d', 'M 60 148 Q 280 145 420 25');
+        curve.setAttribute('stroke', '#0284C7');
+        insight.innerHTML = 'En escala lineal, los primeros 7 meses parecen "muertos" porque 1.000 usuarios es invisible al lado de 100.000.';
+        btnLinear.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand text-white shadow-sm transition-all';
+        btnLog.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all';
+      }
+    }
+
+    // 4. Scatter Alpha Toggle (Slide 7)
+    function toggleScatterAlpha(hasAlpha) {
+      const dots = document.querySelectorAll('.scatter-dot');
+      const status = document.getElementById('scatterStatus');
+      const insight = document.getElementById('scatterInsight');
+      const btnSolid = document.getElementById('btnAlphaSolid');
+      const btnTrans = document.getElementById('btnAlphaTrans');
+
+      if (hasAlpha) {
+        dots.forEach(d => d.setAttribute('opacity', '0.35'));
+        status.textContent = "Transparencia activa (alpha=0.35)";
+        status.className = "font-bold text-emerald-500";
+        insight.innerHTML = 'Al activar <code class="font-mono text-accent">alpha=0.35</code>, las zonas con múltiples observaciones superpuestas se vuelven más oscuras, revelando la concentración de datos oculta.';
+        btnTrans.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand text-white shadow-sm transition-all';
+        btnSolid.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all';
+      } else {
+        dots.forEach(d => d.setAttribute('opacity', '1.0'));
+        status.textContent = "Puntos opacos (alpha=1.0) - ¡Engañoso!";
+        status.className = "font-bold text-rose-500 animate-pulse";
+        insight.innerHTML = '<strong class="text-rose-500">Peligro de Overplotting:</strong> 15 puntos están ocultos debajo de otros. Parece que hubiera pocas observaciones, falseando la conclusión.';
+        btnSolid.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 text-white shadow-sm transition-all';
+        btnTrans.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all';
+      }
+    }
+
+    // 5. Accent Color Toggle (Slide 8)
+    function toggleAccentColor(isAccent) {
+      const b1 = document.getElementById('cBar1');
+      const b2 = document.getElementById('cBar2');
+      const b3 = document.getElementById('cBar3');
+      const b4 = document.getElementById('cBar4');
+      const b5 = document.getElementById('cBar5');
+      const title = document.getElementById('colorChartTitle');
+      const explain = document.getElementById('colorExplain');
+      const btnRainbow = document.getElementById('btnColorRainbow');
+      const btnAccent = document.getElementById('btnColorAccent');
+
+      if (isAccent) {
+        b1.style.backgroundColor = '#94A3B8';
+        b2.style.backgroundColor = '#94A3B8';
+        b3.style.backgroundColor = '#EA580C';
+        b4.style.backgroundColor = '#94A3B8';
+        b5.style.backgroundColor = '#94A3B8';
+        title.textContent = "Línea 3 concentró el 42% de los defectos del turno";
+        explain.innerHTML = 'Al usar gris para el contexto y un acento cálido para la categoría crítica, la audiencia lee la conclusión en <strong>menos de 2 segundos</strong>.';
+        btnAccent.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent text-white shadow-sm transition-all';
+        btnRainbow.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all';
+      } else {
+        b1.style.backgroundColor = '#3B82F6';
+        b2.style.backgroundColor = '#10B981';
+        b3.style.backgroundColor = '#F59E0B';
+        b4.style.backgroundColor = '#8B5CF6';
+        b5.style.backgroundColor = '#EC4899';
+        title.textContent = "Defectos por línea de producción (¿cuál importa?)";
+        explain.innerHTML = '<strong class="text-rose-500">Sobrecarga cognitiva:</strong> 5 colores arbitrarios obligan al cerebro a procesar 5 estímulos sin jerarquía. Ningún dato resalta por sobre otro.';
+        btnRainbow.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 text-white shadow-sm transition-all';
+        btnAccent.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all';
+      }
+    }
+
+    // Inicialización del estado
+    updateSlide();
+  </script>
+</body>
+</html>
