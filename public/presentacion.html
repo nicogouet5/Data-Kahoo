@@ -125,6 +125,24 @@
       color: #E2E8F0;
       border: 1px solid #1E293B;
     }
+  
+    #ambientCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .deck {
+      position: relative;
+      z-index: 10;
+      background: transparent;
+    }
+    .slide {
+      background: transparent;
+    }
+
   </style>
 </head>
 
@@ -151,6 +169,11 @@
 
     <!-- Right Controls -->
     <div class="flex items-center space-x-2">
+            <button id="toggleFxBtn" title="Alternar animaciones de fondo tipo ASCII/Gráficos (A)" class="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/60 transition-colors flex items-center space-x-1">
+        <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <span class="text-[10px] font-mono font-bold uppercase hidden md:inline text-accent" id="fxLabel">FX: ON</span>
+      </button>
+
       <button id="toggleNotesBtn" title="Ver notas de cátedra (N)" class="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/60 transition-colors">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
       </button>
@@ -174,6 +197,9 @@
     <div class="absolute bottom-0 left-0 h-[2px] bg-accent transition-all duration-300" id="progressBar" style="width: 9%;"></div>
   </header>
 
+    <!-- DYNAMIC AMBIENT CANVAS (ASCII & FLOATING CHARTS) -->
+  <canvas id="ambientCanvas"></canvas>
+
   <!-- MAIN SLIDES TRACK -->
   <div class="deck relative w-screen h-screen overflow-hidden">
     <div id="slideTrack" class="slide-track">
@@ -192,6 +218,39 @@
           <p class="max-w-2xl mx-auto text-base sm:text-xl text-slate-600 dark:text-slate-300 font-normal leading-relaxed text-balance">
             Cómo elegir el gráfico correcto según el tipo semántico de cada variable, construir argumentos honestos y evitar trampas visuales comunes.
           </p>
+
+          <!-- Interactive ASCII Hero Visualizer -->
+          <div class="max-w-2xl mx-auto rounded-xl bg-slate-950/85 border border-slate-800/90 text-left p-3.5 shadow-2xl font-mono text-xs backdrop-blur-md relative overflow-hidden group">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-800 text-[11px] text-slate-400">
+              <div class="flex items-center space-x-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
+                <span class="ml-2 text-slate-200 font-semibold">hbda_kernel // live_ascii_stream</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="text-[10px] text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/60 font-bold animate-pulse">● EN VIVO</span>
+                <span class="text-[10px] text-slate-500 font-mono">plt.subplots()</span>
+              </div>
+            </div>
+            
+            <!-- Live ASCII chart display -->
+            <pre id="asciiHeroDisplay" class="py-2.5 px-1 text-emerald-400/95 leading-none text-[11px] sm:text-xs overflow-x-auto selection:bg-emerald-500 selection:text-black font-mono">
+   ▲  fig, ax = plt.subplots(figsize=(10, 4))
+ y ┼   ▄█▄          ╭─╮
+   │  █████        ╭╯ ╰╮      ·   *   ✦   ·
+   │ ▄█████▄      ╭╯   ╰╮    ·  *  (x, y) ~ N(μ, σ²)
+ 0 ┴─┴─────┴──────┴─────┴───► x  ─────────────────────
+   [CATEGÓRICA]   [TEMPORAL]    [DISPERSIÓN CONTINUA]
+            </pre>
+
+            <div class="flex items-center justify-between pt-1.5 border-t border-slate-800/80 text-[10px] text-slate-500 font-mono">
+              <span class="text-slate-400">ax.bar() · ax.plot() · ax.scatter()</span>
+              <span class="text-accent font-semibold flex items-center space-x-1">
+                <span>Pasa el cursor o pulsa "A" para pausar animación</span>
+              </span>
+            </div>
+          </div>
 
           <div class="pt-4 flex flex-wrap items-center justify-center gap-4 text-xs sm:text-sm font-mono text-slate-500 dark:text-slate-400">
             <span class="inline-flex items-center px-3 py-1.5 rounded-md bg-paper-raised dark:bg-paper-raisedDark border border-paper-border dark:border-paper-borderDark">
@@ -984,6 +1043,7 @@
     }
 
     function updateSlide() {
+      triggerSlideShockwave();
       // Move track
       slideTrack.style.transform = `translateX(-${(currentSlide - 1) * 100}vw)`;
       
@@ -1314,6 +1374,447 @@
 
     // Inicialización del estado
     updateSlide();
+
+    // ==========================================
+    // DYNAMIC AMBIENT CANVAS & ASCII CHARTS ENGINE
+    // ==========================================
+    const ambientCanvas = document.getElementById("ambientCanvas");
+    const ambientCtx = ambientCanvas.getContext("2d");
+    let fxActive = localStorage.getItem("ambient_fx") !== "false";
+    const fxLabel = document.getElementById("fxLabel");
+    const toggleFxBtn = document.getElementById("toggleFxBtn");
+
+    function updateFxButton() {
+      if (fxLabel) {
+        fxLabel.textContent = fxActive ? "FX: ON" : "FX: OFF";
+        fxLabel.className = fxActive 
+          ? "text-[10px] font-mono font-bold uppercase hidden md:inline text-accent" 
+          : "text-[10px] font-mono font-bold uppercase hidden md:inline text-slate-400";
+      }
+      if (ambientCanvas) {
+        ambientCanvas.style.display = fxActive ? "block" : "none";
+      }
+    }
+
+    function toggleFx() {
+      fxActive = !fxActive;
+      localStorage.setItem("ambient_fx", fxActive);
+      updateFxButton();
+    }
+    if (toggleFxBtn) toggleFxBtn.onclick = toggleFx;
+
+    // Resize canvas
+    let cw = (ambientCanvas.width = window.innerWidth);
+    let ch = (ambientCanvas.height = window.innerHeight);
+
+    window.addEventListener("resize", () => {
+      cw = ambientCanvas.width = window.innerWidth;
+      ch = ambientCanvas.height = window.innerHeight;
+      initFloatingCharts();
+    });
+
+    // Mouse position & parallax
+    const mouse = { x: -1000, y: -1000, targetX: -1000, targetY: -1000 };
+    window.addEventListener("mousemove", (e) => {
+      mouse.targetX = e.clientX;
+      mouse.targetY = e.clientY;
+    });
+    window.addEventListener("mouseleave", () => {
+      mouse.targetX = -1000;
+      mouse.targetY = -1000;
+    });
+
+    // Shockwaves on slide change
+    const shockwaves = [];
+    function triggerSlideShockwave() {
+      if (!fxActive) return;
+      shockwaves.push({
+        x: cw / 2,
+        y: ch / 2,
+        radius: 10,
+        maxRadius: Math.hypot(cw, ch) * 0.75,
+        alpha: 0.28,
+        speed: 18
+      });
+    }
+
+    // ASCII & Data Viz Floating Glyphs
+    const ASCII_TERMS = [
+      "fig, ax = plt.subplots()",
+      "ax.bar(categorias, ventas)",
+      "ax.plot(sem, app, marker="o")",
+      "ax.scatter(inversion, ventas, alpha=0.35)",
+      "ax.set_yscale("log")",
+      "ax.set_ylim(0, 100)",
+      "alpha=0.35",
+      "df.dtypes",
+      "(x, y) ~ N(μ, σ²)",
+      "IQR = Q3 - Q1",
+      "y = β₀ + β₁x + ε",
+      "[  ▂▃▄▅▆▇█]",
+      "[█▇▆▅▄▃▂  ]",
+      "p < 0.001",
+      "ax.tick_params(labelrotation=30)",
+      "ax.spines["top"].set_visible(False)",
+      "plt.tight_layout()",
+      "Σ(xi - x̄)²",
+      "R² = 0.892",
+      "λ = 2.4",
+      "σ = 1.15",
+      "loc="upper left"",
+      "figsize=(10, 4.5)",
+      "● ─── ● ─── ●",
+      "ax.grid(alpha=0.3, linestyle=":")",
+      "y_hat = 14.2x + 5.1",
+      "bins = 20",
+      "ax.annotate(text, xy)"
+    ];
+
+    const particles = [];
+    const PARTICLE_COUNT = Math.min(38, Math.floor(window.innerWidth / 35));
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      particles.push({
+        text: ASCII_TERMS[i % ASCII_TERMS.length],
+        x: Math.random() * cw,
+        y: Math.random() * ch,
+        vx: (Math.random() - 0.5) * 0.35,
+        vy: (Math.random() - 0.5) * 0.35,
+        size: Math.random() * 3 + 10,
+        baseAlpha: Math.random() * 0.09 + 0.04,
+        hue: i % 3 === 0 ? "234, 88, 12" : (i % 3 === 1 ? "2, 132, 199" : "16, 185, 129"),
+        seed: Math.random() * Math.PI * 2
+      });
+    }
+
+    // Floating Geometric Wireframe Charts
+    let floatingCharts = [];
+    function initFloatingCharts() {
+      floatingCharts = [
+        // 1. Oscillating Wave Chart (Top Right)
+        {
+          type: "wave",
+          x: cw * 0.78,
+          y: ch * 0.18,
+          w: 220,
+          h: 110,
+          points: 12,
+          phase: 0,
+          speed: 0.018,
+          hue: "2, 132, 199" // Sky blue
+        },
+        // 2. Isometric Breathing Bar Chart (Bottom Left)
+        {
+          type: "bars",
+          x: cw * 0.12,
+          y: ch * 0.75,
+          w: 200,
+          h: 90,
+          barCount: 6,
+          phase: 0,
+          speed: 0.022,
+          hue: "234, 88, 12" // Warm accent
+        },
+        // 3. Floating Scatter Cloud with Delaunay Mesh (Bottom Right)
+        {
+          type: "scatter",
+          x: cw * 0.82,
+          y: ch * 0.78,
+          w: 180,
+          h: 120,
+          dots: Array.from({ length: 9 }, () => ({
+            rx: (Math.random() - 0.5) * 140,
+            ry: (Math.random() - 0.5) * 90,
+            vx: (Math.random() - 0.5) * 0.3,
+            vy: (Math.random() - 0.5) * 0.3
+          })),
+          hue: "16, 185, 129" // Emerald
+        },
+        // 4. Radar Target Grid (Top Left)
+        {
+          type: "radar",
+          x: cw * 0.14,
+          y: ch * 0.22,
+          radius: 55,
+          angle: 0,
+          speed: 0.015,
+          hue: "139, 92, 246" // Purple
+        }
+      ];
+    }
+    initFloatingCharts();
+
+    // Main Animation Loop
+    let animFrameId = null;
+    let globalTime = 0;
+
+    function renderAmbient() {
+      if (!fxActive) {
+        animFrameId = requestAnimationFrame(renderAmbient);
+        return;
+      }
+
+      globalTime += 0.016;
+      ambientCtx.clearRect(0, 0, cw, ch);
+
+      const isDark = document.documentElement.classList.contains("dark");
+      const alphaBoost = isDark ? 1.0 : 0.75;
+
+      // Mouse smooth interpolation
+      mouse.x += (mouse.targetX - mouse.x) * 0.08;
+      mouse.y += (mouse.targetY - mouse.y) * 0.08;
+
+      // 1. Draw Shockwaves
+      for (let i = shockwaves.length - 1; i >= 0; i--) {
+        const sw = shockwaves[i];
+        sw.radius += sw.speed;
+        sw.alpha *= 0.94;
+
+        ambientCtx.save();
+        ambientCtx.beginPath();
+        ambientCtx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+        ambientCtx.strokeStyle = `rgba(234, 88, 12, ${sw.alpha * alphaBoost})`;
+        ambientCtx.lineWidth = 2.5;
+        ambientCtx.setLineDash([8, 12]);
+        ambientCtx.stroke();
+        ambientCtx.restore();
+
+        if (sw.alpha < 0.005 || sw.radius > sw.maxRadius) {
+          shockwaves.splice(i, 1);
+        }
+      }
+
+      // 2. Draw Floating Wireframe Charts
+      floatingCharts.forEach(chart => {
+        ambientCtx.save();
+        chart.phase += chart.speed;
+
+        // Subtle mouse parallax
+        const dxM = (mouse.x - chart.x) * 0.015;
+        const dyM = (mouse.y - chart.y) * 0.015;
+        const cx = chart.x + (mouse.x > 0 ? dxM : 0);
+        const cy = chart.y + (mouse.y > 0 ? dyM : 0);
+
+        if (chart.type === "wave") {
+          // Bounding Box
+          ambientCtx.strokeStyle = `rgba(${chart.hue}, ${0.07 * alphaBoost})`;
+          ambientCtx.lineWidth = 1;
+          ambientCtx.setLineDash([4, 6]);
+          ambientCtx.strokeRect(cx - chart.w / 2, cy - chart.h / 2, chart.w, chart.h);
+
+          // Zero line
+          ambientCtx.beginPath();
+          ambientCtx.moveTo(cx - chart.w / 2, cy);
+          ambientCtx.lineTo(cx + chart.w / 2, cy);
+          ambientCtx.stroke();
+
+          // Sine curve
+          ambientCtx.setLineDash([]);
+          ambientCtx.beginPath();
+          ambientCtx.strokeStyle = `rgba(${chart.hue}, ${0.16 * alphaBoost})`;
+          ambientCtx.lineWidth = 1.8;
+
+          for (let p = 0; p <= chart.points; p++) {
+            const px = cx - chart.w / 2 + (p / chart.points) * chart.w;
+            const py = cy + Math.sin(p * 0.65 + chart.phase) * (chart.h * 0.35);
+            if (p === 0) ambientCtx.moveTo(px, py);
+            else ambientCtx.lineTo(px, py);
+          }
+          ambientCtx.stroke();
+
+          // Dots on wave
+          for (let p = 0; p <= chart.points; p += 2) {
+            const px = cx - chart.w / 2 + (p / chart.points) * chart.w;
+            const py = cy + Math.sin(p * 0.65 + chart.phase) * (chart.h * 0.35);
+            ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.28 * alphaBoost})`;
+            ambientCtx.beginPath();
+            ambientCtx.arc(px, py, 2.5, 0, Math.PI * 2);
+            ambientCtx.fill();
+          }
+
+          // Monospace Tag
+          ambientCtx.font = "9px "JetBrains Mono", monospace";
+          ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.22 * alphaBoost})`;
+          ambientCtx.fillText("ax.plot(t, y) // dynamic_wave", cx - chart.w / 2 + 6, cy - chart.h / 2 + 14);
+
+        } else if (chart.type === "bars") {
+          // Baseline
+          ambientCtx.strokeStyle = `rgba(${chart.hue}, ${0.1 * alphaBoost})`;
+          ambientCtx.lineWidth = 1;
+          ambientCtx.setLineDash([3, 4]);
+          ambientCtx.beginPath();
+          ambientCtx.moveTo(cx - chart.w / 2, cy + chart.h / 2);
+          ambientCtx.lineTo(cx + chart.w / 2, cy + chart.h / 2);
+          ambientCtx.stroke();
+
+          // Bars
+          ambientCtx.setLineDash([]);
+          const barW = (chart.w / chart.barCount) * 0.65;
+          const gap = chart.w / chart.barCount;
+
+          for (let b = 0; b < chart.barCount; b++) {
+            const bx = cx - chart.w / 2 + b * gap + (gap - barW) / 2;
+            const bh = (chart.h * 0.65) * (0.4 + 0.5 * Math.sin(chart.phase + b * 0.9));
+            const by = cy + chart.h / 2 - bh;
+
+            ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.12 * alphaBoost})`;
+            ambientCtx.fillRect(bx, by, barW, bh);
+
+            ambientCtx.strokeStyle = `rgba(${chart.hue}, ${0.25 * alphaBoost})`;
+            ambientCtx.strokeRect(bx, by, barW, bh);
+          }
+
+          ambientCtx.font = "9px "JetBrains Mono", monospace";
+          ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.22 * alphaBoost})`;
+          ambientCtx.fillText("ax.bar() // baseline=0", cx - chart.w / 2, cy - chart.h / 2 + 10);
+
+        } else if (chart.type === "scatter") {
+          // Scatter cluster with connecting threads
+          chart.dots.forEach((dot, idx) => {
+            dot.rx += dot.vx;
+            dot.ry += dot.vy;
+            if (Math.abs(dot.rx) > chart.w / 2) dot.vx *= -1;
+            if (Math.abs(dot.ry) > chart.h / 2) dot.vy *= -1;
+
+            const px = cx + dot.rx;
+            const py = cy + dot.ry;
+
+            ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.28 * alphaBoost})`;
+            ambientCtx.beginPath();
+            ambientCtx.arc(px, py, 2.5, 0, Math.PI * 2);
+            ambientCtx.fill();
+
+            // Connections to close neighbors
+            for (let j = idx + 1; j < chart.dots.length; j++) {
+              const other = chart.dots[j];
+              const ox = cx + other.rx;
+              const oy = cy + other.ry;
+              const dist = Math.hypot(px - ox, py - oy);
+              if (dist < 60) {
+                ambientCtx.strokeStyle = `rgba(${chart.hue}, ${(1 - dist / 60) * 0.1 * alphaBoost})`;
+                ambientCtx.beginPath();
+                ambientCtx.moveTo(px, py);
+                ambientCtx.lineTo(ox, oy);
+                ambientCtx.stroke();
+              }
+            }
+          });
+
+          ambientCtx.font = "9px "JetBrains Mono", monospace";
+          ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.22 * alphaBoost})`;
+          ambientCtx.fillText("ax.scatter() // alpha=0.35", cx - chart.w / 2, cy - chart.h / 2 + 10);
+
+        } else if (chart.type === "radar") {
+          chart.angle += chart.speed;
+          ambientCtx.strokeStyle = `rgba(${chart.hue}, ${0.08 * alphaBoost})`;
+          ambientCtx.lineWidth = 1;
+
+          // Concentric circles
+          [0.35, 0.7, 1.0].forEach(r => {
+            ambientCtx.beginPath();
+            ambientCtx.arc(cx, cy, chart.radius * r, 0, Math.PI * 2);
+            ambientCtx.stroke();
+          });
+
+          // Cross axes
+          ambientCtx.beginPath();
+          ambientCtx.moveTo(cx - chart.radius, cy);
+          ambientCtx.lineTo(cx + chart.radius, cy);
+          ambientCtx.moveTo(cx, cy - chart.radius);
+          ambientCtx.lineTo(cx, cy + chart.radius);
+          ambientCtx.stroke();
+
+          // Sweeping radar beam
+          ambientCtx.beginPath();
+          ambientCtx.moveTo(cx, cy);
+          ambientCtx.arc(cx, cy, chart.radius, chart.angle, chart.angle + 0.6);
+          ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.08 * alphaBoost})`;
+          ambientCtx.fill();
+        }
+
+        ambientCtx.restore();
+      });
+
+      // 3. Draw Floating ASCII Glyphs
+      ambientCtx.font = "11px "JetBrains Mono", ui-monospace, monospace";
+
+      particles.forEach(p => {
+        // Organic drift
+        p.x += p.vx + Math.sin(globalTime + p.seed) * 0.15;
+        p.y += p.vy + Math.cos(globalTime + p.seed) * 0.15;
+
+        // Wrap around screen boundaries
+        if (p.x < -150) p.x = cw + 100;
+        if (p.x > cw + 150) p.x = -100;
+        if (p.y < -50) p.y = ch + 50;
+        if (p.y > ch + 50) p.y = -50;
+
+        // Mouse repulsion
+        let dispX = 0;
+        let dispY = 0;
+        if (mouse.x > 0 && mouse.y > 0) {
+          const mdx = p.x - mouse.x;
+          const mdy = p.y - mouse.y;
+          const mdist = Math.hypot(mdx, mdy);
+          if (mdist < 140) {
+            const force = (1 - mdist / 140) * 22;
+            dispX = (mdx / mdist) * force;
+            dispY = (mdy / mdist) * force;
+          }
+        }
+
+        ambientCtx.fillStyle = `rgba(${p.hue}, ${p.baseAlpha * alphaBoost})`;
+        ambientCtx.fillText(p.text, p.x + dispX, p.y + dispY);
+      });
+
+      animFrameId = requestAnimationFrame(renderAmbient);
+    }
+    renderAmbient();
+    updateFxButton();
+
+    // ==========================================
+    // HERO ASCII STREAM REAL-TIME OSCILLATOR (Slide 1)
+    // ==========================================
+    const asciiHeroDisplay = document.getElementById("asciiHeroDisplay");
+    let heroFrame = 0;
+
+    const barGlyphs = [" ", " ", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
+    function getBar(val) {
+      const idx = Math.max(0, Math.min(barGlyphs.length - 1, Math.floor(val * (barGlyphs.length - 1))));
+      return barGlyphs[idx];
+    }
+
+    if (asciiHeroDisplay) {
+      setInterval(() => {
+        if (!fxActive) return;
+        heroFrame++;
+        const t = heroFrame * 0.15;
+
+        // Oscillating bars
+        const b1 = Math.abs(Math.sin(t));
+        const b2 = Math.abs(Math.sin(t + 0.8));
+        const b3 = Math.abs(Math.sin(t + 1.6));
+        const b4 = Math.abs(Math.sin(t + 2.4));
+
+        // Oscillating wave slope
+        const waveChar1 = Math.sin(t) > 0 ? "╭─╮" : "╰─╯";
+        const waveChar2 = Math.cos(t) > 0 ? "╭╯ ╰╮" : "╰╮ ╭╯";
+
+        // Dynamic scatter dots
+        const s1 = Math.sin(t * 1.5) > 0 ? "✦" : "·";
+        const s2 = Math.cos(t * 1.2) > 0 ? "*" : "·";
+        const s3 = Math.sin(t * 0.8) > 0 ? "●" : "·";
+
+        asciiHeroDisplay.textContent = 
+`   ▲  fig, ax = plt.subplots(figsize=(10, 4.5)) // frame: ${heroFrame.toString().padStart(4, "0")}
+ y ┼   ${getBar(b1)}${getBar(b2)}${getBar(b3)}           ${waveChar1}           ${s1}   ${s2}   ✦   ${s3}
+   │  █████         ${waveChar2}         ·  *  (x, y) ~ N(μ, σ²)
+   │ ▄█████▄       ╭╯   ╰╮       r = 0.842 · p < 0.001
+ 0 ┴─┴─────┴───────┴─────┴──────► x  ─────────────────────────
+   [CATEGÓRICA]    [TEMPORAL]        [DISPERSIÓN CONTINUA]`;
+      }, 110);
+    }
+
   </script>
 </body>
 </html>
