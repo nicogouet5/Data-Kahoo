@@ -132,11 +132,11 @@
       width: 100vw;
       height: 100vh;
       pointer-events: none;
-      z-index: 0;
+      z-index: 1;
     }
     .deck {
       position: relative;
-      z-index: 10;
+      z-index: 5;
       background: transparent;
     }
     .slide {
@@ -1020,61 +1020,472 @@
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
-    // State
+    // ==========================================
+    // 1. AMBIENT CANVAS & ASCII FX ENGINE (TOP-LEVEL INITIALIZATION)
+    // ==========================================
+    const ambientCanvas = document.getElementById("ambientCanvas");
+    const ambientCtx = ambientCanvas ? ambientCanvas.getContext("2d") : null;
+    let fxActive = localStorage.getItem("ambient_fx") !== "false";
+    const fxLabel = document.getElementById("fxLabel");
+    const toggleFxBtn = document.getElementById("toggleFxBtn");
+
+    function updateFxButton() {
+      if (fxLabel) {
+        fxLabel.textContent = fxActive ? "FX: ON" : "FX: OFF";
+        fxLabel.className = fxActive 
+          ? "text-[10px] font-mono font-bold uppercase hidden md:inline text-accent" 
+          : "text-[10px] font-mono font-bold uppercase hidden md:inline text-slate-400";
+      }
+      if (ambientCanvas) {
+        ambientCanvas.style.display = fxActive ? "block" : "none";
+      }
+    }
+
+    function toggleFx() {
+      fxActive = !fxActive;
+      localStorage.setItem("ambient_fx", fxActive);
+      updateFxButton();
+    }
+    if (toggleFxBtn) toggleFxBtn.onclick = toggleFx;
+
+    // Resize canvas
+    let cw = (ambientCanvas ? (ambientCanvas.width = window.innerWidth) : 1920);
+    let ch = (ambientCanvas ? (ambientCanvas.height = window.innerHeight) : 1080);
+
+    window.addEventListener("resize", () => {
+      if (!ambientCanvas) return;
+      cw = ambientCanvas.width = window.innerWidth;
+      ch = ambientCanvas.height = window.innerHeight;
+      initFloatingCharts();
+    });
+
+    // Mouse position & parallax
+    const mouse = { x: -1000, y: -1000, targetX: -1000, targetY: -1000 };
+    window.addEventListener("mousemove", (e) => {
+      mouse.targetX = e.clientX;
+      mouse.targetY = e.clientY;
+    });
+    window.addEventListener("mouseleave", () => {
+      mouse.targetX = -1000;
+      mouse.targetY = -1000;
+    });
+
+    // Shockwaves on slide change
+    const shockwaves = [];
+    function triggerSlideShockwave() {
+      if (!fxActive || !ambientCanvas) return;
+      shockwaves.push({
+        x: cw / 2,
+        y: ch / 2,
+        radius: 10,
+        maxRadius: Math.hypot(cw, ch) * 0.8,
+        alpha: 0.45,
+        speed: 22
+      });
+    }
+
+    // ASCII & Data Viz Floating Glyphs
+    const ASCII_TERMS = [
+      "fig, ax = plt.subplots()",
+      "ax.bar(categorias, ventas)",
+      "ax.plot(sem, app, marker=\"o\")",
+      "ax.scatter(inversion, ventas, alpha=0.35)",
+      "ax.set_yscale(\"log\")",
+      "ax.set_ylim(0, 100)",
+      "alpha=0.35",
+      "df.dtypes",
+      "(x, y) ~ N(μ, σ²)",
+      "IQR = Q3 - Q1",
+      "y = β₀ + β₁x + ε",
+      "[  ▂▃▄▅▆▇█]",
+      "[█▇▆▅▄▃▂  ]",
+      "p < 0.001",
+      "ax.tick_params(labelrotation=30)",
+      "ax.spines[\"top\"].set_visible(False)",
+      "plt.tight_layout()",
+      "Σ(xi - x̄)²",
+      "R² = 0.892",
+      "λ = 2.4",
+      "σ = 1.15",
+      "loc=\"upper left\"",
+      "figsize=(10, 4.5)",
+      "● ─── ● ─── ●",
+      "ax.grid(alpha=0.3, linestyle=\":\")",
+      "y_hat = 14.2x + 5.1",
+      "bins = 20",
+      "ax.annotate(text, xy)"
+    ];
+
+    const particles = [];
+    const PARTICLE_COUNT = Math.min(45, Math.floor(window.innerWidth / 30));
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      particles.push({
+        text: ASCII_TERMS[i % ASCII_TERMS.length],
+        x: Math.random() * cw,
+        y: Math.random() * ch,
+        vx: (Math.random() - 0.5) * 0.45,
+        vy: (Math.random() - 0.5) * 0.45,
+        size: Math.random() * 3 + 10,
+        baseAlpha: Math.random() * 0.16 + 0.18,
+        hue: i % 4 === 0 ? "234, 88, 12" : (i % 4 === 1 ? "2, 132, 199" : (i % 4 === 2 ? "16, 185, 129" : "168, 85, 247")),
+        seed: Math.random() * Math.PI * 2
+      });
+    }
+
+    // Floating Geometric Wireframe Charts
+    let floatingCharts = [];
+    function initFloatingCharts() {
+      floatingCharts = [
+        // 1. Oscillating Wave Chart (Top Right)
+        {
+          type: "wave",
+          x: cw * 0.82,
+          y: ch * 0.22,
+          w: 240,
+          h: 120,
+          points: 14,
+          phase: 0,
+          speed: 0.02,
+          hue: "2, 132, 199" // Sky blue
+        },
+        // 2. Isometric Breathing Bar Chart (Bottom Left)
+        {
+          type: "bars",
+          x: cw * 0.14,
+          y: ch * 0.76,
+          w: 220,
+          h: 100,
+          barCount: 6,
+          phase: 0,
+          speed: 0.024,
+          hue: "234, 88, 12" // Warm accent
+        },
+        // 3. Floating Scatter Cloud with Delaunay Mesh (Bottom Right)
+        {
+          type: "scatter",
+          x: cw * 0.84,
+          y: ch * 0.78,
+          w: 200,
+          h: 130,
+          dots: Array.from({ length: 11 }, () => ({
+            rx: (Math.random() - 0.5) * 160,
+            ry: (Math.random() - 0.5) * 100,
+            vx: (Math.random() - 0.5) * 0.35,
+            vy: (Math.random() - 0.5) * 0.35
+          })),
+          hue: "16, 185, 129" // Emerald
+        },
+        // 4. Radar Target Grid (Top Left)
+        {
+          type: "radar",
+          x: cw * 0.15,
+          y: ch * 0.24,
+          radius: 65,
+          angle: 0,
+          speed: 0.016,
+          hue: "168, 85, 247" // Purple
+        }
+      ];
+    }
+    initFloatingCharts();
+
+    // Main Animation Loop
+    let animFrameId = null;
+    let globalTime = 0;
+
+    function renderAmbient() {
+      if (!ambientCtx) return;
+      if (!fxActive) {
+        animFrameId = window.requestAnimationFrame(renderAmbient);
+        return;
+      }
+
+      globalTime += 0.016;
+      ambientCtx.clearRect(0, 0, cw, ch);
+
+      const isDark = document.documentElement.classList.contains("dark");
+      const alphaMultiplier = isDark ? 1.2 : 0.95;
+
+      // Mouse smooth interpolation
+      mouse.x += (mouse.targetX - mouse.x) * 0.08;
+      mouse.y += (mouse.targetY - mouse.y) * 0.08;
+
+      // 1. Draw Shockwaves
+      for (let i = shockwaves.length - 1; i >= 0; i--) {
+        const sw = shockwaves[i];
+        sw.radius += sw.speed;
+        sw.alpha *= 0.94;
+
+        ambientCtx.save();
+        ambientCtx.beginPath();
+        ambientCtx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+        ambientCtx.strokeStyle = `rgba(234, 88, 12, ${sw.alpha * alphaMultiplier})`;
+        ambientCtx.lineWidth = 3;
+        ambientCtx.setLineDash([8, 12]);
+        ambientCtx.stroke();
+        ambientCtx.restore();
+
+        if (sw.alpha < 0.005 || sw.radius > sw.maxRadius) {
+          shockwaves.splice(i, 1);
+        }
+      }
+
+      // 2. Draw Floating Wireframe Charts
+      floatingCharts.forEach(chart => {
+        ambientCtx.save();
+        chart.phase += chart.speed;
+
+        // Subtle mouse parallax
+        const dxM = (mouse.x - chart.x) * 0.018;
+        const dyM = (mouse.y - chart.y) * 0.018;
+        const cx = chart.x + (mouse.x > 0 ? dxM : 0);
+        const cy = chart.y + (mouse.y > 0 ? dyM : 0);
+
+        if (chart.type === "wave") {
+          // Bounding Box
+          ambientCtx.strokeStyle = `rgba(${chart.hue}, ${0.14 * alphaMultiplier})`;
+          ambientCtx.lineWidth = 1;
+          ambientCtx.setLineDash([4, 6]);
+          ambientCtx.strokeRect(cx - chart.w / 2, cy - chart.h / 2, chart.w, chart.h);
+
+          // Zero line
+          ambientCtx.beginPath();
+          ambientCtx.moveTo(cx - chart.w / 2, cy);
+          ambientCtx.lineTo(cx + chart.w / 2, cy);
+          ambientCtx.stroke();
+
+          // Sine curve
+          ambientCtx.setLineDash([]);
+          ambientCtx.beginPath();
+          ambientCtx.strokeStyle = `rgba(${chart.hue}, ${0.32 * alphaMultiplier})`;
+          ambientCtx.lineWidth = 2.2;
+
+          for (let p = 0; p <= chart.points; p++) {
+            const px = cx - chart.w / 2 + (p / chart.points) * chart.w;
+            const py = cy + Math.sin(p * 0.65 + chart.phase) * (chart.h * 0.35);
+            if (p === 0) ambientCtx.moveTo(px, py);
+            else ambientCtx.lineTo(px, py);
+          }
+          ambientCtx.stroke();
+
+          // Dots on wave
+          for (let p = 0; p <= chart.points; p += 2) {
+            const px = cx - chart.w / 2 + (p / chart.points) * chart.w;
+            const py = cy + Math.sin(p * 0.65 + chart.phase) * (chart.h * 0.35);
+            ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.5 * alphaMultiplier})`;
+            ambientCtx.beginPath();
+            ambientCtx.arc(px, py, 3, 0, Math.PI * 2);
+            ambientCtx.fill();
+          }
+
+          // Monospace Tag
+          ambientCtx.font = "10px \"JetBrains Mono\", monospace";
+          ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.4 * alphaMultiplier})`;
+          ambientCtx.fillText("ax.plot(t, y) // dynamic_wave", cx - chart.w / 2 + 6, cy - chart.h / 2 + 15);
+
+        } else if (chart.type === "bars") {
+          // Baseline
+          ambientCtx.strokeStyle = `rgba(${chart.hue}, ${0.2 * alphaMultiplier})`;
+          ambientCtx.lineWidth = 1.5;
+          ambientCtx.setLineDash([3, 4]);
+          ambientCtx.beginPath();
+          ambientCtx.moveTo(cx - chart.w / 2, cy + chart.h / 2);
+          ambientCtx.lineTo(cx + chart.w / 2, cy + chart.h / 2);
+          ambientCtx.stroke();
+
+          // Bars
+          ambientCtx.setLineDash([]);
+          const barW = (chart.w / chart.barCount) * 0.65;
+          const gap = chart.w / chart.barCount;
+
+          for (let b = 0; b < chart.barCount; b++) {
+            const bx = cx - chart.w / 2 + b * gap + (gap - barW) / 2;
+            const bh = (chart.h * 0.65) * (0.35 + 0.55 * Math.sin(chart.phase + b * 0.9));
+            const by = cy + chart.h / 2 - bh;
+
+            ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.22 * alphaMultiplier})`;
+            ambientCtx.fillRect(bx, by, barW, bh);
+
+            ambientCtx.strokeStyle = `rgba(${chart.hue}, ${0.45 * alphaMultiplier})`;
+            ambientCtx.strokeRect(bx, by, barW, bh);
+          }
+
+          ambientCtx.font = "10px \"JetBrains Mono\", monospace";
+          ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.4 * alphaMultiplier})`;
+          ambientCtx.fillText("ax.bar() // baseline=0", cx - chart.w / 2, cy - chart.h / 2 + 10);
+
+        } else if (chart.type === "scatter") {
+          // Scatter cluster with connecting threads
+          chart.dots.forEach((dot, idx) => {
+            dot.rx += dot.vx;
+            dot.ry += dot.vy;
+            if (Math.abs(dot.rx) > chart.w / 2) dot.vx *= -1;
+            if (Math.abs(dot.ry) > chart.h / 2) dot.vy *= -1;
+
+            const px = cx + dot.rx;
+            const py = cy + dot.ry;
+
+            ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.5 * alphaMultiplier})`;
+            ambientCtx.beginPath();
+            ambientCtx.arc(px, py, 3, 0, Math.PI * 2);
+            ambientCtx.fill();
+
+            // Connections to close neighbors
+            for (let j = idx + 1; j < chart.dots.length; j++) {
+              const other = chart.dots[j];
+              const ox = cx + other.rx;
+              const oy = cy + other.ry;
+              const dist = Math.hypot(px - ox, py - oy);
+              if (dist < 70) {
+                ambientCtx.strokeStyle = `rgba(${chart.hue}, ${(1 - dist / 70) * 0.25 * alphaMultiplier})`;
+                ambientCtx.beginPath();
+                ambientCtx.moveTo(px, py);
+                ambientCtx.lineTo(ox, oy);
+                ambientCtx.stroke();
+              }
+            }
+          });
+
+          ambientCtx.font = "10px \"JetBrains Mono\", monospace";
+          ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.4 * alphaMultiplier})`;
+          ambientCtx.fillText("ax.scatter() // alpha=0.35", cx - chart.w / 2, cy - chart.h / 2 + 10);
+
+        } else if (chart.type === "radar") {
+          chart.angle += chart.speed;
+          ambientCtx.strokeStyle = `rgba(${chart.hue}, ${0.16 * alphaMultiplier})`;
+          ambientCtx.lineWidth = 1;
+
+          // Concentric circles
+          [0.35, 0.7, 1.0].forEach(r => {
+            ambientCtx.beginPath();
+            ambientCtx.arc(cx, cy, chart.radius * r, 0, Math.PI * 2);
+            ambientCtx.stroke();
+          });
+
+          // Cross axes
+          ambientCtx.beginPath();
+          ambientCtx.moveTo(cx - chart.radius, cy);
+          ambientCtx.lineTo(cx + chart.radius, cy);
+          ambientCtx.moveTo(cx, cy - chart.radius);
+          ambientCtx.lineTo(cx, cy + chart.radius);
+          ambientCtx.stroke();
+
+          // Sweeping radar beam
+          ambientCtx.beginPath();
+          ambientCtx.moveTo(cx, cy);
+          ambientCtx.arc(cx, cy, chart.radius, chart.angle, chart.angle + 0.6);
+          ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.15 * alphaMultiplier})`;
+          ambientCtx.fill();
+        }
+
+        ambientCtx.restore();
+      });
+
+      // 3. Draw Floating ASCII Glyphs
+      ambientCtx.font = "12px \"JetBrains Mono\", ui-monospace, monospace";
+
+      particles.forEach(p => {
+        // Organic drift
+        p.x += p.vx + Math.sin(globalTime + p.seed) * 0.2;
+        p.y += p.vy + Math.cos(globalTime + p.seed) * 0.2;
+
+        // Wrap around screen boundaries
+        if (p.x < -180) p.x = cw + 120;
+        if (p.x > cw + 180) p.x = -120;
+        if (p.y < -50) p.y = ch + 50;
+        if (p.y > ch + 50) p.y = -50;
+
+        // Mouse repulsion
+        let dispX = 0;
+        let dispY = 0;
+        if (mouse.x > 0 && mouse.y > 0) {
+          const mdx = p.x - mouse.x;
+          const mdy = p.y - mouse.y;
+          const mdist = Math.hypot(mdx, mdy);
+          if (mdist < 160) {
+            const force = (1 - mdist / 160) * 26;
+            dispX = (mdx / mdist) * force;
+            dispY = (mdy / mdist) * force;
+          }
+        }
+
+        ambientCtx.fillStyle = `rgba(${p.hue}, ${p.baseAlpha * alphaMultiplier})`;
+        ambientCtx.fillText(p.text, p.x + dispX, p.y + dispY);
+      });
+
+      animFrameId = window.requestAnimationFrame(renderAmbient);
+    }
+
+    // ==========================================
+    // 2. SLIDE NAVIGATION & PRESENTATION STATE
+    // ==========================================
     let currentSlide = 1;
     const totalSlides = 11;
-    const slideTrack = document.getElementById('slideTrack');
-    const currentSlideNum = document.getElementById('currentSlideNum');
-    const totalSlidesNum = document.getElementById('totalSlidesNum');
-    const progressBar = document.getElementById('progressBar');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const dotsContainer = document.getElementById('dotsContainer');
-    const notesDrawer = document.getElementById('notesDrawer');
-    const notesContent = document.getElementById('notesContent');
+    const slideTrack = document.getElementById("slideTrack");
+    const currentSlideNum = document.getElementById("currentSlideNum");
+    const totalSlidesNum = document.getElementById("totalSlidesNum");
+    const progressBar = document.getElementById("progressBar");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const dotsContainer = document.getElementById("dotsContainer");
+    const notesDrawer = document.getElementById("notesDrawer");
+    const notesContent = document.getElementById("notesContent");
 
     // Create Navigation Dots
-    for (let i = 1; i <= totalSlides; i++) {
-      const dot = document.createElement('button');
-      dot.className = `w-2 h-2 rounded-full transition-all ${i === 1 ? 'bg-accent w-4' : 'bg-slate-300 dark:bg-slate-600'}`;
-      dot.title = `Ir a slide ${i}`;
-      dot.onclick = () => goToSlide(i);
-      dotsContainer.appendChild(dot);
+    if (dotsContainer) {
+      dotsContainer.innerHTML = "";
+      for (let i = 1; i <= totalSlides; i++) {
+        const dot = document.createElement("button");
+        dot.className = `w-2 h-2 rounded-full transition-all ${i === 1 ? "bg-accent w-4" : "bg-slate-300 dark:bg-slate-600"}`;
+        dot.title = `Ir a slide ${i}`;
+        dot.onclick = () => goToSlide(i);
+        dotsContainer.appendChild(dot);
+      }
     }
 
     function updateSlide() {
       triggerSlideShockwave();
+      
       // Move track
-      slideTrack.style.transform = `translateX(-${(currentSlide - 1) * 100}vw)`;
+      if (slideTrack) {
+        slideTrack.style.transform = `translateX(-${(currentSlide - 1) * 100}vw)`;
+      }
       
       // Update numbers
-      currentSlideNum.textContent = currentSlide.toString().padStart(2, '0');
-      totalSlidesNum.textContent = totalSlides.toString().padStart(2, '0');
+      if (currentSlideNum) currentSlideNum.textContent = currentSlide.toString().padStart(2, "0");
+      if (totalSlidesNum) totalSlidesNum.textContent = totalSlides.toString().padStart(2, "0");
       
       // Update progress bar
-      const progressPercent = (currentSlide / totalSlides) * 100;
-      progressBar.style.width = `${progressPercent}%`;
+      if (progressBar) {
+        const progressPercent = (currentSlide / totalSlides) * 100;
+        progressBar.style.width = `${progressPercent}%`;
+      }
 
       // Update buttons
-      prevBtn.disabled = currentSlide === 1;
-      nextBtn.disabled = currentSlide === totalSlides;
+      if (prevBtn) prevBtn.disabled = currentSlide === 1;
+      if (nextBtn) nextBtn.disabled = currentSlide === totalSlides;
 
       // Update dots
-      const dots = dotsContainer.children;
-      for (let i = 0; i < dots.length; i++) {
-        if (i + 1 === currentSlide) {
-          dots[i].className = 'w-4 h-2 rounded-full bg-accent transition-all';
-        } else {
-          dots[i].className = 'w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 transition-all';
+      if (dotsContainer) {
+        const dots = dotsContainer.children;
+        for (let i = 0; i < dots.length; i++) {
+          if (i + 1 === currentSlide) {
+            dots[i].className = "w-4 h-2 rounded-full bg-accent transition-all";
+          } else {
+            dots[i].className = "w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 transition-all";
+          }
         }
       }
 
       // Update Speaker Notes
       const activeSlideEl = document.querySelector(`.slide[data-slide="${currentSlide}"]`);
-      if (activeSlideEl && activeSlideEl.dataset.notes) {
-        notesContent.textContent = activeSlideEl.dataset.notes;
-      } else {
-        notesContent.textContent = "Sin notas para esta diapositiva.";
+      if (notesContent) {
+        if (activeSlideEl && activeSlideEl.dataset.notes) {
+          notesContent.textContent = activeSlideEl.dataset.notes;
+        } else {
+          notesContent.textContent = "Sin notas para esta diapositiva.";
+        }
       }
     }
 
@@ -1100,45 +1511,52 @@
     }
 
     // Keyboard navigation
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+    window.addEventListener("keydown", (e) => {
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : "";
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") {
         e.preventDefault();
         nextSlide();
-      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp' || e.key === 'Backspace') {
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp" || e.key === "Backspace") {
         e.preventDefault();
         prevSlide();
-      } else if (e.key.toLowerCase() === 'n') {
+      } else if (e.key.toLowerCase() === "n") {
         toggleNotes();
-      } else if (e.key.toLowerCase() === 't') {
+      } else if (e.key.toLowerCase() === "t") {
         toggleTheme();
-      } else if (e.key.toLowerCase() === 'f') {
+      } else if (e.key.toLowerCase() === "a") {
+        toggleFx();
+      } else if (e.key.toLowerCase() === "f") {
         toggleFullscreen();
       }
     });
 
     // Toggle Speaker Notes
     function toggleNotes() {
-      const isOpen = !notesDrawer.classList.contains('opacity-0');
+      if (!notesDrawer) return;
+      const isOpen = !notesDrawer.classList.contains("opacity-0");
       if (isOpen) {
-        notesDrawer.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+        notesDrawer.classList.add("opacity-0", "pointer-events-none", "translate-y-4");
       } else {
-        notesDrawer.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+        notesDrawer.classList.remove("opacity-0", "pointer-events-none", "translate-y-4");
       }
     }
-    document.getElementById('toggleNotesBtn').onclick = toggleNotes;
+    const notesBtn = document.getElementById("toggleNotesBtn");
+    if (notesBtn) notesBtn.onclick = toggleNotes;
 
     // Theme Toggle
     function toggleTheme() {
-      const isDark = document.documentElement.classList.toggle('dark');
-      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      const isDark = document.documentElement.classList.toggle("dark");
+      localStorage.setItem("theme", isDark ? "dark" : "light");
     }
-    document.getElementById('toggleThemeBtn').onclick = toggleTheme;
+    const themeBtn = document.getElementById("toggleThemeBtn");
+    if (themeBtn) themeBtn.onclick = toggleTheme;
 
-    // Check saved theme or system preference
-    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      document.documentElement.classList.add('dark');
+    if (localStorage.getItem("theme") === "dark" || (!("theme" in localStorage) && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+      document.documentElement.classList.add("dark");
     } else {
-      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.remove("dark");
     }
 
     // Fullscreen Toggle
@@ -1149,9 +1567,12 @@
         document.exitFullscreen().catch(() => {});
       }
     }
-    document.getElementById('toggleFullscreenBtn').onclick = toggleFullscreen;
+    const fsBtn = document.getElementById("toggleFullscreenBtn");
+    if (fsBtn) fsBtn.onclick = toggleFullscreen;
 
-    // --- INTERACTIVE SLIDE DEMOS ---
+    // ==========================================
+    // 3. INTERACTIVE SLIDE DEMOS & SIMULATORS
+    // ==========================================
 
     // 1. Matriz de Intenciones (Slide 3)
     const intentData = {
@@ -1161,8 +1582,8 @@
         forbiddenChart: "Gráfico de Pastel (Pie Chart) con >3 rebanadas",
         whyBest: "El ojo humano compara longitudes en un eje común con precisión milimétrica.",
         whyForbidden: "Los ángulos y áreas circulares engañan la percepción humana; es imposible saber si una rebanada de 22% es mayor que una de 19% sin leer la etiqueta.",
-        rule: "Si los nombres de categorías son largos (ej. 'Comuna de Pedro Aguirre Cerda'), usa barras horizontales (ax.barh) para que el texto no se superponga.",
-        code: "ax.bar(categorias, valores, color='#EA580C')\n# o barras horizontales:\nax.barh(categorias, valores)"
+        rule: "Si los nombres de categorías son largos (ej. \"Comuna de Pedro Aguirre Cerda\"), usa barras horizontales (ax.barh) para que el texto no se superponga.",
+        code: "ax.bar(categorias, valores, color=\"#EA580C\")\n# o barras horizontales:\nax.barh(categorias, valores)"
       },
       tendencia: {
         title: "Evolución Temporal & Tendencias",
@@ -1171,7 +1592,7 @@
         whyBest: "La línea genera una ilusión de continuidad que refleja el paso real del tiempo.",
         whyForbidden: "Conectar puntos que no tienen orden temporal inventa pendientes matemáticas que no existen en la realidad.",
         rule: "En multi-serie, asigna marcadores (o, s, ^) y estilos de línea (-, --) para ser accesible a daltónicos.",
-        code: "ax.plot(fechas, ventas, marker='o', linestyle='-', color='navy')"
+        code: "ax.plot(fechas, ventas, marker=\"o\", linestyle=\"-\", color=\"navy\")"
       },
       relacion: {
         title: "Relación entre Dos Variables Numéricas",
@@ -1180,604 +1601,232 @@
         whyBest: "Muestra si a medida que crece X, Y sube (correlación positiva), baja (negativa) o se dispersa al azar.",
         whyForbidden: "Unir puntos de dos métricas independientes con una línea produce una maraña incomprensible.",
         rule: "Siempre configura alpha < 0.5 cuando tengas más de 30 observaciones para diagnosticar sobreposición (overplotting).",
-        code: "ax.scatter(inversion, ventas, alpha=0.35, color='#0284C7')"
+        code: "ax.scatter(inversion, ventas, alpha=0.35, color=\"#0284C7\")"
       },
       distribucion: {
         title: "Distribución de una Variable Cuantitativa",
         bestChart: "Histograma / Diagrama de Caja (Boxplot)",
         forbiddenChart: "Promedio simple sin desviación estándar",
         whyBest: "Revela la asimetría (sesgo a la derecha o izquierda), bimodalidad y valores atípicos extremos.",
-        whyForbidden: "Un solo número (ej. 'el sueldo promedio es 1.5M') oculta que el 80% gana menos de 800k.",
+        whyForbidden: "Un solo número (ej. \"el sueldo promedio es 1.5M\") oculta que el 80% gana menos de 800k.",
         rule: "Ajusta el número de bins (intervalos) conscientemente; muy pocos bins ocultan la forma y demasiados crean ruido.",
-        code: "ax.hist(edades, bins=20, edgecolor='black', color='#10B981')"
+        code: "ax.hist(edades, bins=20, edgecolor=\"black\", color=\"#10B981\")"
       }
     };
 
     function setChartIntent(intentKey) {
-      document.querySelectorAll('.intent-btn').forEach(btn => {
-        btn.classList.remove('border-accent', 'bg-accent/10', 'text-accent');
-        btn.classList.add('border-paper-border', 'dark:border-paper-borderDark', 'bg-paper-raised', 'dark:bg-paper-raisedDark', 'text-slate-600', 'dark:text-slate-300');
+      document.querySelectorAll(".intent-btn").forEach(btn => {
+        btn.classList.remove("border-accent", "bg-accent/10", "text-accent");
+        btn.classList.add("border-paper-border", "dark:border-paper-borderDark", "bg-paper-raised", "dark:bg-paper-raisedDark", "text-slate-600", "dark:text-slate-300");
       });
       const activeBtn = document.getElementById(`btnIntent-${intentKey}`);
       if (activeBtn) {
-        activeBtn.classList.add('border-accent', 'bg-accent/10', 'text-accent');
-        activeBtn.classList.remove('border-paper-border', 'dark:border-paper-borderDark', 'bg-paper-raised', 'dark:bg-paper-raisedDark', 'text-slate-600', 'dark:text-slate-300');
+        activeBtn.classList.add("border-accent", "bg-accent/10", "text-accent");
+        activeBtn.classList.remove("border-paper-border", "dark:border-paper-borderDark", "bg-paper-raised", "dark:bg-paper-raisedDark", "text-slate-600", "dark:text-slate-300");
       }
 
       const item = intentData[intentKey];
-      const box = document.getElementById('intentDisplayBox');
-      box.innerHTML = `
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-paper-border dark:border-paper-borderDark">
-          <h3 class="text-base font-bold text-slate-900 dark:text-white font-serif">${item.title}</h3>
-          <span class="text-xs font-mono px-2.5 py-1 rounded bg-accent-soft dark:bg-accent-softDark text-accent font-semibold">Gráfico Ideal: ${item.bestChart}</span>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div class="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 space-y-1.5">
-            <div class="font-bold text-emerald-800 dark:text-emerald-300 flex items-center space-x-1.5">
-              <span>✓</span>
-              <span>¿Por qué funciona?</span>
-            </div>
-            <p class="text-emerald-900 dark:text-emerald-200/90 leading-relaxed">${item.whyBest}</p>
-            <div class="pt-1 text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">${item.rule}</div>
+      const box = document.getElementById("intentDisplayBox");
+      if (box && item) {
+        box.innerHTML = `
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-paper-border dark:border-paper-borderDark">
+            <h3 class="text-base font-bold text-slate-900 dark:text-white font-serif">${item.title}</h3>
+            <span class="text-xs font-mono px-2.5 py-1 rounded bg-accent-soft dark:bg-accent-softDark text-accent font-semibold">Gráfico Ideal: ${item.bestChart}</span>
           </div>
-          <div class="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 space-y-1.5">
-            <div class="font-bold text-rose-800 dark:text-rose-300 flex items-center space-x-1.5">
-              <span>✕</span>
-              <span>Peligro / Anti-Patrón:</span>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div class="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 space-y-1.5">
+              <div class="font-bold text-emerald-800 dark:text-emerald-300 flex items-center space-x-1.5">
+                <span>✓</span>
+                <span>¿Por qué funciona?</span>
+              </div>
+              <p class="text-emerald-900 dark:text-emerald-200/90 leading-relaxed">${item.whyBest}</p>
+              <div class="pt-1 text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">${item.rule}</div>
             </div>
-            <div class="font-semibold text-rose-900 dark:text-rose-200">${item.forbiddenChart}</div>
-            <p class="text-rose-900 dark:text-rose-200/90 leading-relaxed">${item.whyForbidden}</p>
+            <div class="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 space-y-1.5">
+              <div class="font-bold text-rose-800 dark:text-rose-300 flex items-center space-x-1.5">
+                <span>✕</span>
+                <span>Peligro / Anti-Patrón:</span>
+              </div>
+              <div class="font-semibold text-rose-900 dark:text-rose-200">${item.forbiddenChart}</div>
+              <p class="text-rose-900 dark:text-rose-200/90 leading-relaxed">${item.whyForbidden}</p>
+            </div>
           </div>
-        </div>
-        <div class="code-block p-3 rounded-lg text-xs font-mono">
-          <span class="text-slate-400"># Matplotlib syntax</span><br>
-          ${item.code.replace(/\n/g, '<br>')}
-        </div>
-      `;
+          <div class="code-block p-3 rounded-lg text-xs font-mono">
+            <span class="text-slate-400"># Matplotlib syntax</span><br>
+            ${item.code.replace(/\n/g, "<br>")}
+          </div>
+        `;
+      }
     }
-
-    // Inicializar primer intent
-    setChartIntent('comparar');
+    setChartIntent("comparar");
 
     // 2. Bar Y-Axis Zero Toggle (Slide 4)
     function toggleYAxis(isZero) {
-      const barA = document.getElementById('barA');
-      const barB = document.getElementById('barB');
-      const barC = document.getElementById('barC');
-      const barD = document.getElementById('barD');
-      const yAxisLabel = document.getElementById('yAxisLabel');
-      const yAxisImpact = document.getElementById('yAxisImpact');
-      const btnYZero = document.getElementById('btnYZero');
-      const btnYTruncated = document.getElementById('btnYTruncated');
+      const barA = document.getElementById("barA");
+      const barB = document.getElementById("barB");
+      const barC = document.getElementById("barC");
+      const barD = document.getElementById("barD");
+      const yAxisLabel = document.getElementById("yAxisLabel");
+      const yAxisImpact = document.getElementById("yAxisImpact");
+      const btnYZero = document.getElementById("btnYZero");
+      const btnYTruncated = document.getElementById("btnYTruncated");
+
+      if (!barA || !barB || !barC || !barD) return;
 
       if (isZero) {
-        // Honesto: 0 a 100% -> alturas proporcionales de 184px a 190px (diferencia sutil real)
-        barA.style.height = '184px';
-        barB.style.height = '188px';
-        barC.style.height = '186px';
-        barD.style.height = '190px';
-        yAxisLabel.textContent = 'Escala: 0% a 100%';
-        yAxisLabel.className = 'font-bold text-emerald-500';
-        yAxisImpact.innerHTML = 'En escala completa (eje en cero), las 4 empresas operan con rendimiento similar (rango de 2.8 puntos).';
-        btnYZero.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white shadow-sm transition-all';
-        btnYTruncated.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all';
+        barA.style.height = "184px";
+        barB.style.height = "188px";
+        barC.style.height = "186px";
+        barD.style.height = "190px";
+        if (yAxisLabel) {
+          yAxisLabel.textContent = "Escala: 0% a 100%";
+          yAxisLabel.className = "font-bold text-emerald-500";
+        }
+        if (yAxisImpact) {
+          yAxisImpact.innerHTML = "En escala completa (eje en cero), las 4 empresas operan con rendimiento similar (rango de 2.8 puntos).";
+        }
+        if (btnYZero) btnYZero.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white shadow-sm transition-all";
+        if (btnYTruncated) btnYTruncated.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all";
       } else {
-        // Truncado: 91% a 96% -> distorsión donde Courier D parece 4x más alto que Courier A
-        barA.style.height = '40px';
-        barB.style.height = '120px';
-        barC.style.height = '70px';
-        barD.style.height = '180px';
-        yAxisLabel.textContent = 'Escala: 91% a 96% (¡TRUNCADO!)';
-        yAxisLabel.className = 'font-bold text-rose-500 animate-pulse';
-        yAxisImpact.innerHTML = '<strong class="text-rose-500">¡Alerta de Manipulación Visual!</strong> Truncar a 91% hace parecer que Courier D cuadruplica a Courier A cuando solo difieren en 2.8%.';
-        btnYTruncated.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 text-white shadow-sm transition-all';
-        btnYZero.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all';
+        barA.style.height = "40px";
+        barB.style.height = "120px";
+        barC.style.height = "70px";
+        barD.style.height = "180px";
+        if (yAxisLabel) {
+          yAxisLabel.textContent = "Escala: 91% a 96% (¡TRUNCADO!)";
+          yAxisLabel.className = "font-bold text-rose-500 animate-pulse";
+        }
+        if (yAxisImpact) {
+          yAxisImpact.innerHTML = "<strong class=\"text-rose-500\">¡Alerta de Manipulación Visual!</strong> Truncar a 91% hace parecer que Courier D cuadruplica a Courier A cuando solo difieren en 2.8%.";
+        }
+        if (btnYTruncated) btnYTruncated.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 text-white shadow-sm transition-all";
+        if (btnYZero) btnYZero.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all";
       }
     }
 
     // 3. Scale Log vs Linear Toggle (Slide 6)
     function toggleScale(isLog) {
-      const modeText = document.getElementById('scaleCurrentMode');
-      const yTop = document.getElementById('yLabelTop');
-      const yMid = document.getElementById('yLabelMid');
-      const yBot = document.getElementById('yLabelBot');
-      const curve = document.getElementById('scaleCurve');
-      const insight = document.getElementById('scaleInsight');
-      const btnLinear = document.getElementById('btnScaleLinear');
-      const btnLog = document.getElementById('btnScaleLog');
+      const modeText = document.getElementById("scaleCurrentMode");
+      const yTop = document.getElementById("yLabelTop");
+      const yMid = document.getElementById("yLabelMid");
+      const yBot = document.getElementById("yLabelBot");
+      const curve = document.getElementById("scaleCurve");
+      const insight = document.getElementById("scaleInsight");
+      const btnLinear = document.getElementById("btnScaleLinear");
+      const btnLog = document.getElementById("btnScaleLog");
 
       if (isLog) {
-        modeText.textContent = "Modo: Logarítmico (ax.set_yscale('log'))";
-        modeText.className = "font-bold text-accent";
-        yTop.textContent = "100k (10^5)";
-        yMid.textContent = "1k (10^3)";
-        yBot.textContent = "10 (10^1)";
-        // In log scale, exponential growth with constant rate is a STRAIGHT line
-        curve.setAttribute('d', 'M 60 145 L 420 30');
-        curve.setAttribute('stroke', '#EA580C');
-        insight.innerHTML = '<strong class="text-accent">La escala logarítmica convierte el crecimiento exponencial en una línea recta.</strong> Permite comprobar al instante si el producto mantiene una tasa de aceleración porcentual constante.';
-        btnLog.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent text-white shadow-sm transition-all';
-        btnLinear.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all';
+        if (modeText) {
+          modeText.textContent = "Modo: Logarítmico (ax.set_yscale(\"log\"))";
+          modeText.className = "font-bold text-accent";
+        }
+        if (yTop) yTop.textContent = "100k (10^5)";
+        if (yMid) yMid.textContent = "1k (10^3)";
+        if (yBot) yBot.textContent = "10 (10^1)";
+        if (curve) {
+          curve.setAttribute("d", "M 60 145 L 420 30");
+          curve.setAttribute("stroke", "#EA580C");
+        }
+        if (insight) {
+          insight.innerHTML = "<strong class=\"text-accent\">La escala logarítmica convierte el crecimiento exponencial en una línea recta.</strong> Permite comprobar al instante si el producto mantiene una tasa de aceleración constante.";
+        }
+        if (btnLog) btnLog.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent text-white shadow-sm transition-all";
+        if (btnLinear) btnLinear.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all";
       } else {
-        modeText.textContent = "Modo: Lineal (ax.set_yscale('linear'))";
-        modeText.className = "font-bold text-brand";
-        yTop.textContent = "100k";
-        yMid.textContent = "50k";
-        yBot.textContent = "0";
-        curve.setAttribute('d', 'M 60 148 Q 280 145 420 25');
-        curve.setAttribute('stroke', '#0284C7');
-        insight.innerHTML = 'En escala lineal, los primeros 7 meses parecen "muertos" porque 1.000 usuarios es invisible al lado de 100.000.';
-        btnLinear.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand text-white shadow-sm transition-all';
-        btnLog.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all';
+        if (modeText) {
+          modeText.textContent = "Modo: Lineal (ax.set_yscale(\"linear\"))";
+          modeText.className = "font-bold text-brand";
+        }
+        if (yTop) yTop.textContent = "100k";
+        if (yMid) yMid.textContent = "50k";
+        if (yBot) yBot.textContent = "0";
+        if (curve) {
+          curve.setAttribute("d", "M 60 148 Q 280 145 420 25");
+          curve.setAttribute("stroke", "#0284C7");
+        }
+        if (insight) {
+          insight.innerHTML = "En escala lineal, los primeros 7 meses parecen \"muertos\" porque 1.000 usuarios es invisible al lado de 100.000.";
+        }
+        if (btnLinear) btnLinear.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand text-white shadow-sm transition-all";
+        if (btnLog) btnLog.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all";
       }
     }
 
     // 4. Scatter Alpha Toggle (Slide 7)
     function toggleScatterAlpha(hasAlpha) {
-      const dots = document.querySelectorAll('.scatter-dot');
-      const status = document.getElementById('scatterStatus');
-      const insight = document.getElementById('scatterInsight');
-      const btnSolid = document.getElementById('btnAlphaSolid');
-      const btnTrans = document.getElementById('btnAlphaTrans');
+      const dots = document.querySelectorAll(".scatter-dot");
+      const status = document.getElementById("scatterStatus");
+      const insight = document.getElementById("scatterInsight");
+      const btnSolid = document.getElementById("btnAlphaSolid");
+      const btnTrans = document.getElementById("btnAlphaTrans");
 
       if (hasAlpha) {
-        dots.forEach(d => d.setAttribute('opacity', '0.35'));
-        status.textContent = "Transparencia activa (alpha=0.35)";
-        status.className = "font-bold text-emerald-500";
-        insight.innerHTML = 'Al activar <code class="font-mono text-accent">alpha=0.35</code>, las zonas con múltiples observaciones superpuestas se vuelven más oscuras, revelando la concentración de datos oculta.';
-        btnTrans.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand text-white shadow-sm transition-all';
-        btnSolid.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all';
+        dots.forEach(d => d.setAttribute("opacity", "0.35"));
+        if (status) {
+          status.textContent = "Transparencia activa (alpha=0.35)";
+          status.className = "font-bold text-emerald-500";
+        }
+        if (insight) {
+          insight.innerHTML = "Al activar <code class=\"font-mono text-accent\">alpha=0.35</code>, las zonas con múltiples observaciones superpuestas se vuelven más oscuras, revelando la concentración oculta.";
+        }
+        if (btnTrans) btnTrans.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand text-white shadow-sm transition-all";
+        if (btnSolid) btnSolid.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all";
       } else {
-        dots.forEach(d => d.setAttribute('opacity', '1.0'));
-        status.textContent = "Puntos opacos (alpha=1.0) - ¡Engañoso!";
-        status.className = "font-bold text-rose-500 animate-pulse";
-        insight.innerHTML = '<strong class="text-rose-500">Peligro de Overplotting:</strong> 15 puntos están ocultos debajo de otros. Parece que hubiera pocas observaciones, falseando la conclusión.';
-        btnSolid.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 text-white shadow-sm transition-all';
-        btnTrans.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all';
+        dots.forEach(d => d.setAttribute("opacity", "1.0"));
+        if (status) {
+          status.textContent = "Puntos opacos (alpha=1.0) - ¡Engañoso!";
+          status.className = "font-bold text-rose-500 animate-pulse";
+        }
+        if (insight) {
+          insight.innerHTML = "<strong class=\"text-rose-500\">Peligro de Overplotting:</strong> 15 puntos están ocultos debajo de otros. Parece que hubiera pocas observaciones, falseando la conclusión.";
+        }
+        if (btnSolid) btnSolid.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 text-white shadow-sm transition-all";
+        if (btnTrans) btnTrans.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all";
       }
     }
 
     // 5. Accent Color Toggle (Slide 8)
     function toggleAccentColor(isAccent) {
-      const b1 = document.getElementById('cBar1');
-      const b2 = document.getElementById('cBar2');
-      const b3 = document.getElementById('cBar3');
-      const b4 = document.getElementById('cBar4');
-      const b5 = document.getElementById('cBar5');
-      const title = document.getElementById('colorChartTitle');
-      const explain = document.getElementById('colorExplain');
-      const btnRainbow = document.getElementById('btnColorRainbow');
-      const btnAccent = document.getElementById('btnColorAccent');
+      const b1 = document.getElementById("cBar1");
+      const b2 = document.getElementById("cBar2");
+      const b3 = document.getElementById("cBar3");
+      const b4 = document.getElementById("cBar4");
+      const b5 = document.getElementById("cBar5");
+      const title = document.getElementById("colorChartTitle");
+      const explain = document.getElementById("colorExplain");
+      const btnRainbow = document.getElementById("btnColorRainbow");
+      const btnAccent = document.getElementById("btnColorAccent");
+
+      if (!b1 || !b2 || !b3 || !b4 || !b5) return;
 
       if (isAccent) {
-        b1.style.backgroundColor = '#94A3B8';
-        b2.style.backgroundColor = '#94A3B8';
-        b3.style.backgroundColor = '#EA580C';
-        b4.style.backgroundColor = '#94A3B8';
-        b5.style.backgroundColor = '#94A3B8';
-        title.textContent = "Línea 3 concentró el 42% de los defectos del turno";
-        explain.innerHTML = 'Al usar gris para el contexto y un acento cálido para la categoría crítica, la audiencia lee la conclusión en <strong>menos de 2 segundos</strong>.';
-        btnAccent.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent text-white shadow-sm transition-all';
-        btnRainbow.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all';
+        b1.style.backgroundColor = "#94A3B8";
+        b2.style.backgroundColor = "#94A3B8";
+        b3.style.backgroundColor = "#EA580C";
+        b4.style.backgroundColor = "#94A3B8";
+        b5.style.backgroundColor = "#94A3B8";
+        if (title) title.textContent = "Línea 3 concentró el 42% de los defectos del turno";
+        if (explain) explain.innerHTML = "Al usar gris para el contexto y un acento cálido para la categoría crítica, la audiencia lee la conclusión en <strong>menos de 2 segundos</strong>.";
+        if (btnAccent) btnAccent.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent text-white shadow-sm transition-all";
+        if (btnRainbow) btnRainbow.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all";
       } else {
-        b1.style.backgroundColor = '#3B82F6';
-        b2.style.backgroundColor = '#10B981';
-        b3.style.backgroundColor = '#F59E0B';
-        b4.style.backgroundColor = '#8B5CF6';
-        b5.style.backgroundColor = '#EC4899';
-        title.textContent = "Defectos por línea de producción (¿cuál importa?)";
-        explain.innerHTML = '<strong class="text-rose-500">Sobrecarga cognitiva:</strong> 5 colores arbitrarios obligan al cerebro a procesar 5 estímulos sin jerarquía. Ningún dato resalta por sobre otro.';
-        btnRainbow.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 text-white shadow-sm transition-all';
-        btnAccent.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all';
+        b1.style.backgroundColor = "#3B82F6";
+        b2.style.backgroundColor = "#10B981";
+        b3.style.backgroundColor = "#F59E0B";
+        b4.style.backgroundColor = "#8B5CF6";
+        b5.style.backgroundColor = "#EC4899";
+        if (title) title.textContent = "Defectos por línea de producción (¿cuál importa?)";
+        if (explain) explain.innerHTML = "<strong class=\"text-rose-500\">Sobrecarga cognitiva:</strong> 5 colores arbitrarios obligan al cerebro a procesar 5 estímulos sin jerarquía.";
+        if (btnRainbow) btnRainbow.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 text-white shadow-sm transition-all";
+        if (btnAccent) btnAccent.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all";
       }
     }
-
-    // Inicialización del estado
-    updateSlide();
 
     // ==========================================
-    // DYNAMIC AMBIENT CANVAS & ASCII CHARTS ENGINE
-    // ==========================================
-    const ambientCanvas = document.getElementById("ambientCanvas");
-    const ambientCtx = ambientCanvas.getContext("2d");
-    let fxActive = localStorage.getItem("ambient_fx") !== "false";
-    const fxLabel = document.getElementById("fxLabel");
-    const toggleFxBtn = document.getElementById("toggleFxBtn");
-
-    function updateFxButton() {
-      if (fxLabel) {
-        fxLabel.textContent = fxActive ? "FX: ON" : "FX: OFF";
-        fxLabel.className = fxActive 
-          ? "text-[10px] font-mono font-bold uppercase hidden md:inline text-accent" 
-          : "text-[10px] font-mono font-bold uppercase hidden md:inline text-slate-400";
-      }
-      if (ambientCanvas) {
-        ambientCanvas.style.display = fxActive ? "block" : "none";
-      }
-    }
-
-    function toggleFx() {
-      fxActive = !fxActive;
-      localStorage.setItem("ambient_fx", fxActive);
-      updateFxButton();
-    }
-    if (toggleFxBtn) toggleFxBtn.onclick = toggleFx;
-
-    // Resize canvas
-    let cw = (ambientCanvas.width = window.innerWidth);
-    let ch = (ambientCanvas.height = window.innerHeight);
-
-    window.addEventListener("resize", () => {
-      cw = ambientCanvas.width = window.innerWidth;
-      ch = ambientCanvas.height = window.innerHeight;
-      initFloatingCharts();
-    });
-
-    // Mouse position & parallax
-    const mouse = { x: -1000, y: -1000, targetX: -1000, targetY: -1000 };
-    window.addEventListener("mousemove", (e) => {
-      mouse.targetX = e.clientX;
-      mouse.targetY = e.clientY;
-    });
-    window.addEventListener("mouseleave", () => {
-      mouse.targetX = -1000;
-      mouse.targetY = -1000;
-    });
-
-    // Shockwaves on slide change
-    const shockwaves = [];
-    function triggerSlideShockwave() {
-      if (!fxActive) return;
-      shockwaves.push({
-        x: cw / 2,
-        y: ch / 2,
-        radius: 10,
-        maxRadius: Math.hypot(cw, ch) * 0.75,
-        alpha: 0.28,
-        speed: 18
-      });
-    }
-
-    // ASCII & Data Viz Floating Glyphs
-    const ASCII_TERMS = [
-      "fig, ax = plt.subplots()",
-      "ax.bar(categorias, ventas)",
-      "ax.plot(sem, app, marker="o")",
-      "ax.scatter(inversion, ventas, alpha=0.35)",
-      "ax.set_yscale("log")",
-      "ax.set_ylim(0, 100)",
-      "alpha=0.35",
-      "df.dtypes",
-      "(x, y) ~ N(μ, σ²)",
-      "IQR = Q3 - Q1",
-      "y = β₀ + β₁x + ε",
-      "[  ▂▃▄▅▆▇█]",
-      "[█▇▆▅▄▃▂  ]",
-      "p < 0.001",
-      "ax.tick_params(labelrotation=30)",
-      "ax.spines["top"].set_visible(False)",
-      "plt.tight_layout()",
-      "Σ(xi - x̄)²",
-      "R² = 0.892",
-      "λ = 2.4",
-      "σ = 1.15",
-      "loc="upper left"",
-      "figsize=(10, 4.5)",
-      "● ─── ● ─── ●",
-      "ax.grid(alpha=0.3, linestyle=":")",
-      "y_hat = 14.2x + 5.1",
-      "bins = 20",
-      "ax.annotate(text, xy)"
-    ];
-
-    const particles = [];
-    const PARTICLE_COUNT = Math.min(38, Math.floor(window.innerWidth / 35));
-
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      particles.push({
-        text: ASCII_TERMS[i % ASCII_TERMS.length],
-        x: Math.random() * cw,
-        y: Math.random() * ch,
-        vx: (Math.random() - 0.5) * 0.35,
-        vy: (Math.random() - 0.5) * 0.35,
-        size: Math.random() * 3 + 10,
-        baseAlpha: Math.random() * 0.09 + 0.04,
-        hue: i % 3 === 0 ? "234, 88, 12" : (i % 3 === 1 ? "2, 132, 199" : "16, 185, 129"),
-        seed: Math.random() * Math.PI * 2
-      });
-    }
-
-    // Floating Geometric Wireframe Charts
-    let floatingCharts = [];
-    function initFloatingCharts() {
-      floatingCharts = [
-        // 1. Oscillating Wave Chart (Top Right)
-        {
-          type: "wave",
-          x: cw * 0.78,
-          y: ch * 0.18,
-          w: 220,
-          h: 110,
-          points: 12,
-          phase: 0,
-          speed: 0.018,
-          hue: "2, 132, 199" // Sky blue
-        },
-        // 2. Isometric Breathing Bar Chart (Bottom Left)
-        {
-          type: "bars",
-          x: cw * 0.12,
-          y: ch * 0.75,
-          w: 200,
-          h: 90,
-          barCount: 6,
-          phase: 0,
-          speed: 0.022,
-          hue: "234, 88, 12" // Warm accent
-        },
-        // 3. Floating Scatter Cloud with Delaunay Mesh (Bottom Right)
-        {
-          type: "scatter",
-          x: cw * 0.82,
-          y: ch * 0.78,
-          w: 180,
-          h: 120,
-          dots: Array.from({ length: 9 }, () => ({
-            rx: (Math.random() - 0.5) * 140,
-            ry: (Math.random() - 0.5) * 90,
-            vx: (Math.random() - 0.5) * 0.3,
-            vy: (Math.random() - 0.5) * 0.3
-          })),
-          hue: "16, 185, 129" // Emerald
-        },
-        // 4. Radar Target Grid (Top Left)
-        {
-          type: "radar",
-          x: cw * 0.14,
-          y: ch * 0.22,
-          radius: 55,
-          angle: 0,
-          speed: 0.015,
-          hue: "139, 92, 246" // Purple
-        }
-      ];
-    }
-    initFloatingCharts();
-
-    // Main Animation Loop
-    let animFrameId = null;
-    let globalTime = 0;
-
-    function renderAmbient() {
-      if (!fxActive) {
-        animFrameId = requestAnimationFrame(renderAmbient);
-        return;
-      }
-
-      globalTime += 0.016;
-      ambientCtx.clearRect(0, 0, cw, ch);
-
-      const isDark = document.documentElement.classList.contains("dark");
-      const alphaBoost = isDark ? 1.0 : 0.75;
-
-      // Mouse smooth interpolation
-      mouse.x += (mouse.targetX - mouse.x) * 0.08;
-      mouse.y += (mouse.targetY - mouse.y) * 0.08;
-
-      // 1. Draw Shockwaves
-      for (let i = shockwaves.length - 1; i >= 0; i--) {
-        const sw = shockwaves[i];
-        sw.radius += sw.speed;
-        sw.alpha *= 0.94;
-
-        ambientCtx.save();
-        ambientCtx.beginPath();
-        ambientCtx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
-        ambientCtx.strokeStyle = `rgba(234, 88, 12, ${sw.alpha * alphaBoost})`;
-        ambientCtx.lineWidth = 2.5;
-        ambientCtx.setLineDash([8, 12]);
-        ambientCtx.stroke();
-        ambientCtx.restore();
-
-        if (sw.alpha < 0.005 || sw.radius > sw.maxRadius) {
-          shockwaves.splice(i, 1);
-        }
-      }
-
-      // 2. Draw Floating Wireframe Charts
-      floatingCharts.forEach(chart => {
-        ambientCtx.save();
-        chart.phase += chart.speed;
-
-        // Subtle mouse parallax
-        const dxM = (mouse.x - chart.x) * 0.015;
-        const dyM = (mouse.y - chart.y) * 0.015;
-        const cx = chart.x + (mouse.x > 0 ? dxM : 0);
-        const cy = chart.y + (mouse.y > 0 ? dyM : 0);
-
-        if (chart.type === "wave") {
-          // Bounding Box
-          ambientCtx.strokeStyle = `rgba(${chart.hue}, ${0.07 * alphaBoost})`;
-          ambientCtx.lineWidth = 1;
-          ambientCtx.setLineDash([4, 6]);
-          ambientCtx.strokeRect(cx - chart.w / 2, cy - chart.h / 2, chart.w, chart.h);
-
-          // Zero line
-          ambientCtx.beginPath();
-          ambientCtx.moveTo(cx - chart.w / 2, cy);
-          ambientCtx.lineTo(cx + chart.w / 2, cy);
-          ambientCtx.stroke();
-
-          // Sine curve
-          ambientCtx.setLineDash([]);
-          ambientCtx.beginPath();
-          ambientCtx.strokeStyle = `rgba(${chart.hue}, ${0.16 * alphaBoost})`;
-          ambientCtx.lineWidth = 1.8;
-
-          for (let p = 0; p <= chart.points; p++) {
-            const px = cx - chart.w / 2 + (p / chart.points) * chart.w;
-            const py = cy + Math.sin(p * 0.65 + chart.phase) * (chart.h * 0.35);
-            if (p === 0) ambientCtx.moveTo(px, py);
-            else ambientCtx.lineTo(px, py);
-          }
-          ambientCtx.stroke();
-
-          // Dots on wave
-          for (let p = 0; p <= chart.points; p += 2) {
-            const px = cx - chart.w / 2 + (p / chart.points) * chart.w;
-            const py = cy + Math.sin(p * 0.65 + chart.phase) * (chart.h * 0.35);
-            ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.28 * alphaBoost})`;
-            ambientCtx.beginPath();
-            ambientCtx.arc(px, py, 2.5, 0, Math.PI * 2);
-            ambientCtx.fill();
-          }
-
-          // Monospace Tag
-          ambientCtx.font = "9px "JetBrains Mono", monospace";
-          ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.22 * alphaBoost})`;
-          ambientCtx.fillText("ax.plot(t, y) // dynamic_wave", cx - chart.w / 2 + 6, cy - chart.h / 2 + 14);
-
-        } else if (chart.type === "bars") {
-          // Baseline
-          ambientCtx.strokeStyle = `rgba(${chart.hue}, ${0.1 * alphaBoost})`;
-          ambientCtx.lineWidth = 1;
-          ambientCtx.setLineDash([3, 4]);
-          ambientCtx.beginPath();
-          ambientCtx.moveTo(cx - chart.w / 2, cy + chart.h / 2);
-          ambientCtx.lineTo(cx + chart.w / 2, cy + chart.h / 2);
-          ambientCtx.stroke();
-
-          // Bars
-          ambientCtx.setLineDash([]);
-          const barW = (chart.w / chart.barCount) * 0.65;
-          const gap = chart.w / chart.barCount;
-
-          for (let b = 0; b < chart.barCount; b++) {
-            const bx = cx - chart.w / 2 + b * gap + (gap - barW) / 2;
-            const bh = (chart.h * 0.65) * (0.4 + 0.5 * Math.sin(chart.phase + b * 0.9));
-            const by = cy + chart.h / 2 - bh;
-
-            ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.12 * alphaBoost})`;
-            ambientCtx.fillRect(bx, by, barW, bh);
-
-            ambientCtx.strokeStyle = `rgba(${chart.hue}, ${0.25 * alphaBoost})`;
-            ambientCtx.strokeRect(bx, by, barW, bh);
-          }
-
-          ambientCtx.font = "9px "JetBrains Mono", monospace";
-          ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.22 * alphaBoost})`;
-          ambientCtx.fillText("ax.bar() // baseline=0", cx - chart.w / 2, cy - chart.h / 2 + 10);
-
-        } else if (chart.type === "scatter") {
-          // Scatter cluster with connecting threads
-          chart.dots.forEach((dot, idx) => {
-            dot.rx += dot.vx;
-            dot.ry += dot.vy;
-            if (Math.abs(dot.rx) > chart.w / 2) dot.vx *= -1;
-            if (Math.abs(dot.ry) > chart.h / 2) dot.vy *= -1;
-
-            const px = cx + dot.rx;
-            const py = cy + dot.ry;
-
-            ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.28 * alphaBoost})`;
-            ambientCtx.beginPath();
-            ambientCtx.arc(px, py, 2.5, 0, Math.PI * 2);
-            ambientCtx.fill();
-
-            // Connections to close neighbors
-            for (let j = idx + 1; j < chart.dots.length; j++) {
-              const other = chart.dots[j];
-              const ox = cx + other.rx;
-              const oy = cy + other.ry;
-              const dist = Math.hypot(px - ox, py - oy);
-              if (dist < 60) {
-                ambientCtx.strokeStyle = `rgba(${chart.hue}, ${(1 - dist / 60) * 0.1 * alphaBoost})`;
-                ambientCtx.beginPath();
-                ambientCtx.moveTo(px, py);
-                ambientCtx.lineTo(ox, oy);
-                ambientCtx.stroke();
-              }
-            }
-          });
-
-          ambientCtx.font = "9px "JetBrains Mono", monospace";
-          ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.22 * alphaBoost})`;
-          ambientCtx.fillText("ax.scatter() // alpha=0.35", cx - chart.w / 2, cy - chart.h / 2 + 10);
-
-        } else if (chart.type === "radar") {
-          chart.angle += chart.speed;
-          ambientCtx.strokeStyle = `rgba(${chart.hue}, ${0.08 * alphaBoost})`;
-          ambientCtx.lineWidth = 1;
-
-          // Concentric circles
-          [0.35, 0.7, 1.0].forEach(r => {
-            ambientCtx.beginPath();
-            ambientCtx.arc(cx, cy, chart.radius * r, 0, Math.PI * 2);
-            ambientCtx.stroke();
-          });
-
-          // Cross axes
-          ambientCtx.beginPath();
-          ambientCtx.moveTo(cx - chart.radius, cy);
-          ambientCtx.lineTo(cx + chart.radius, cy);
-          ambientCtx.moveTo(cx, cy - chart.radius);
-          ambientCtx.lineTo(cx, cy + chart.radius);
-          ambientCtx.stroke();
-
-          // Sweeping radar beam
-          ambientCtx.beginPath();
-          ambientCtx.moveTo(cx, cy);
-          ambientCtx.arc(cx, cy, chart.radius, chart.angle, chart.angle + 0.6);
-          ambientCtx.fillStyle = `rgba(${chart.hue}, ${0.08 * alphaBoost})`;
-          ambientCtx.fill();
-        }
-
-        ambientCtx.restore();
-      });
-
-      // 3. Draw Floating ASCII Glyphs
-      ambientCtx.font = "11px "JetBrains Mono", ui-monospace, monospace";
-
-      particles.forEach(p => {
-        // Organic drift
-        p.x += p.vx + Math.sin(globalTime + p.seed) * 0.15;
-        p.y += p.vy + Math.cos(globalTime + p.seed) * 0.15;
-
-        // Wrap around screen boundaries
-        if (p.x < -150) p.x = cw + 100;
-        if (p.x > cw + 150) p.x = -100;
-        if (p.y < -50) p.y = ch + 50;
-        if (p.y > ch + 50) p.y = -50;
-
-        // Mouse repulsion
-        let dispX = 0;
-        let dispY = 0;
-        if (mouse.x > 0 && mouse.y > 0) {
-          const mdx = p.x - mouse.x;
-          const mdy = p.y - mouse.y;
-          const mdist = Math.hypot(mdx, mdy);
-          if (mdist < 140) {
-            const force = (1 - mdist / 140) * 22;
-            dispX = (mdx / mdist) * force;
-            dispY = (mdy / mdist) * force;
-          }
-        }
-
-        ambientCtx.fillStyle = `rgba(${p.hue}, ${p.baseAlpha * alphaBoost})`;
-        ambientCtx.fillText(p.text, p.x + dispX, p.y + dispY);
-      });
-
-      animFrameId = requestAnimationFrame(renderAmbient);
-    }
-    renderAmbient();
-    updateFxButton();
-
-    // ==========================================
-    // HERO ASCII STREAM REAL-TIME OSCILLATOR (Slide 1)
+    // 4. HERO ASCII STREAM (Slide 1)
     // ==========================================
     const asciiHeroDisplay = document.getElementById("asciiHeroDisplay");
     let heroFrame = 0;
-
     const barGlyphs = [" ", " ", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
     function getBar(val) {
       const idx = Math.max(0, Math.min(barGlyphs.length - 1, Math.floor(val * (barGlyphs.length - 1))));
@@ -1789,18 +1838,11 @@
         if (!fxActive) return;
         heroFrame++;
         const t = heroFrame * 0.15;
-
-        // Oscillating bars
         const b1 = Math.abs(Math.sin(t));
         const b2 = Math.abs(Math.sin(t + 0.8));
         const b3 = Math.abs(Math.sin(t + 1.6));
-        const b4 = Math.abs(Math.sin(t + 2.4));
-
-        // Oscillating wave slope
         const waveChar1 = Math.sin(t) > 0 ? "╭─╮" : "╰─╯";
         const waveChar2 = Math.cos(t) > 0 ? "╭╯ ╰╮" : "╰╮ ╭╯";
-
-        // Dynamic scatter dots
         const s1 = Math.sin(t * 1.5) > 0 ? "✦" : "·";
         const s2 = Math.cos(t * 1.2) > 0 ? "*" : "·";
         const s3 = Math.sin(t * 0.8) > 0 ? "●" : "·";
@@ -1815,6 +1857,12 @@
       }, 110);
     }
 
+    // ==========================================
+    // 5. BOOTSTRAP INITIAL STATE
+    // ==========================================
+    updateSlide();
+    updateFxButton();
+    renderAmbient();
   </script>
 </body>
 </html>
