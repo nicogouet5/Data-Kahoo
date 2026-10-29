@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Trophy,
   BookOpen,
+  Presentation,
   Users,
   ArrowLeft,
   Plus,
@@ -563,6 +564,17 @@ export default function App() {
               <Moon size={16} aria-hidden="true" />
             )}
           </button>
+
+          <a
+            href="./presentacion.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-header-secondary"
+            title="Abrir presentación interactiva de cátedra"
+          >
+            <Presentation size={16} aria-hidden="true" />
+            <span>Presentación</span>
+          </a>
 
           <button
             type="button"
